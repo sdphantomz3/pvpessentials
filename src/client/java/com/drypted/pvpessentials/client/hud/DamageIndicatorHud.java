@@ -10,6 +10,10 @@ import net.minecraft.resources.Identifier;
 
 public class DamageIndicatorHud {
 
+    // --- CONFIGURABLE SCALE ---
+    // 1.5f scales the 9x9 heart sprite to ~13.5px, roughly matching your 16x16 arrow icons.
+    private static final float CONFIG_SCALE = 1.2f;
+
     private static final Identifier HEART_FULL_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/heart/full.png");
     private static final Identifier HEART_CONTAINER_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/heart/container.png");
 
@@ -30,15 +34,8 @@ public class DamageIndicatorHud {
             int driftY = (int) (progress * 24);
             
             // --- SIDE SPLIT CALCULATIONS ---
-            int renderX;
-            if (ind.isDamageTaken) {
-                // Damage Taken: Shifted to the right side of the crosshair
-                renderX = centerX + 20 + (int) ind.horizontalSpawnOffset;
-            } else {
-                // Damage Given: Shifted to the left side of the crosshair
-                renderX = centerX - 20 + (int) ind.horizontalSpawnOffset;
-            }
-            
+            // BOTH are now securely grouped exclusively on the left side of the screen
+            int renderX = centerX - 35 + (int) ind.horizontalSpawnOffset;
             int renderY = centerY - 4 - driftY + (int) ind.verticalSpawnOffset;
 
             // --- VALUE UNIT CALCULATION ---
@@ -48,15 +45,18 @@ public class DamageIndicatorHud {
             }
             String hitText = String.format("%.1f", displayAmount);
 
+            // Open global translation + scale stack
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(renderX, renderY);
+            graphics.pose().scale(CONFIG_SCALE, CONFIG_SCALE);
+
             // --- RENDER SLIGHTLY TILTED HEART SPRITE ---
             graphics.pose().pushMatrix();
             
-            // Translate origin to center point of the 9x9 heart sprite box
-            graphics.pose().translate(renderX - 7.5f, renderY + 0.5f);
-            // Apply safe upright rotation degrees
+            // Origin is now local due to outer stack translation
+            graphics.pose().translate(-7.5f, 0.5f);
             float rotationRadians = (float) Math.toRadians(ind.rotationDegrees);
             graphics.pose().rotate(rotationRadians);
-            // Shift back by half dimensions to ensure rotation pivots on center
             graphics.pose().translate(-4.5f, -4.5f);
 
             if (ind.isDamageTaken) {
@@ -68,11 +68,15 @@ public class DamageIndicatorHud {
             graphics.pose().popMatrix();
 
             // --- RENDER UNROTATED STABLE TEXT NEXT TO IT ---
+            // Rendered at local (0,0) as the parent stack controls scaling and position seamlessly
             if (ind.isDamageTaken) {
-                RenderUtil.drawScaledText(graphics, hitText, 0.75f, renderX, renderY, 0xFF5555, alpha, true);
+                RenderUtil.drawScaledText(graphics, hitText, 0.75f, 0, 0, 0xFF5555, alpha, true);
             } else {
-                RenderUtil.drawScaledText(graphics, hitText, 0.75f, renderX, renderY, 0xFFFFFF, alpha, true);
+                RenderUtil.drawScaledText(graphics, hitText, 0.75f, 0, 0, 0xFFFFFF, alpha, true);
             }
+
+            // Close global translation + scale stack
+            graphics.pose().popMatrix();
         }
     }
 }
