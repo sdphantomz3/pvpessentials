@@ -1,9 +1,38 @@
 # PVP Essentials
+Essential client-side PvP features, including armor, potion, and arrow HUDs, damage indicators, and much more!
 
-## Setup
+Version Compatability: 
+- 26.1.2 (Fabric)
+- 1.21.x version will soon be released!
 
-For setup instructions, please see the [Fabric Documentation page](https://docs.fabricmc.net/develop/getting-started/creating-a-project#setting-up) related to the IDE that you are using.
+---
 
-## License
+<p>
+  <a href="https://modrinth.com/mod/dmRZ3797">
+    <img src="https://img.shields.io/modrinth/dt/dmRZ3797?style=for-the-badge&logo=modrinth&label=Modrinth%20Downloads&color=1bd96a">
+  </a>
+  <br>
+  <a href="https://www.curseforge.com/minecraft/mc-mods/1073016">
+    <img src="https://cf.way2muchnoise.eu/full_1073016_downloads.svg">
+  </a>
+</p>
 
-This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
+---
+
+| Feature | Description |
+|----------|-------------|
+| **Armor HUD** | Displays equipped armor and it's durability |
+| **Arrow HUD** | Shows your remaining arrows. |
+| **Potion HUD** | Displays all the potions available in your inventory. |
+| **Misc HUD** | Displays total number of golden apples, ender pearls, cobwebs, etc. available in your inventory. |
+| **Damage Indicator** | Shows how much damage you took, or gave to the enemy. |
+
+---
+
+**Planned Features for future releases:**
+- Config
+- Totem counter
+- Client-side kit system (will include the ability to share your kits with other players)
+- Low fire & Low shield
+- No potion particles
+and hopefully much more!
