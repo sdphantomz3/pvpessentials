@@ -4,7 +4,8 @@ import com.drypted.pvpessentials.client.handler.DamageTracker;
 import com.drypted.pvpessentials.client.hud.ArmorHud;
 import com.drypted.pvpessentials.client.hud.DamageIndicatorHud;
 import com.drypted.pvpessentials.client.hud.PotionHud;
-import com.drypted.pvpessentials.client.hud.ArrowHud; // Added import
+import com.drypted.pvpessentials.client.hud.ArrowHud;
+import com.drypted.pvpessentials.client.hud.MiscHud; // Added import
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -18,6 +19,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
     private final PotionHud potionHud = new PotionHud();
     private final DamageIndicatorHud damageIndicatorHud = new DamageIndicatorHud();
     private final ArrowHud arrowHud = new ArrowHud();
+    private final MiscHud miscHud = new MiscHud();
 
     @Override
     public void onInitializeClient() {
@@ -31,11 +33,18 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 this.armorHud::render
         );
 
-        // Register Potion HUD (Anchored next to the hotbar/armor elements alignment)
+        // Register Potion HUD
         HudElementRegistry.attachElementBefore(
                 VanillaHudElements.HOTBAR,
                 Identifier.fromNamespaceAndPath(MOD_ID, "potion_hud"),
                 this.potionHud::render
+        );
+
+        // Register Misc HUD
+        HudElementRegistry.attachElementBefore(
+                VanillaHudElements.HOTBAR,
+                Identifier.fromNamespaceAndPath(MOD_ID, "misc_hud"),
+                this.miscHud::render
         );
 
         // Register Damage Given/Taken Crosshair Indicators
