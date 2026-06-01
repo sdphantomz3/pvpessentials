@@ -36,7 +36,7 @@ public class DamageIndicatorHud {
                 renderX = centerX + 20 + (int) ind.horizontalSpawnOffset;
             } else {
                 // Damage Given: Shifted to the left side of the crosshair
-                renderX = centerX - 28 + (int) ind.horizontalSpawnOffset;
+                renderX = centerX - 20 + (int) ind.horizontalSpawnOffset;
             }
             
             int renderY = centerY - 4 - driftY + (int) ind.verticalSpawnOffset;
@@ -54,7 +54,8 @@ public class DamageIndicatorHud {
             // Translate origin to center point of the 9x9 heart sprite box
             graphics.pose().translate(renderX - 7.5f, renderY + 0.5f);
             // Apply safe upright rotation degrees
-            graphics.pose().rotate(ind.rotationDegrees);
+            float rotationRadians = (float) Math.toRadians(ind.rotationDegrees);
+            graphics.pose().rotate(rotationRadians);
             // Shift back by half dimensions to ensure rotation pivots on center
             graphics.pose().translate(-4.5f, -4.5f);
 
