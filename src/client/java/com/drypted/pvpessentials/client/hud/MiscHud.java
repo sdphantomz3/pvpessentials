@@ -4,6 +4,9 @@ import com.drypted.pvpessentials.client.util.RenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -13,16 +16,7 @@ import java.util.List;
 
 public class MiscHud {
 
-    // Helper class to store tracked items and their total counted sizes
-    private static class TrackedItem {
-        public final ItemStack displayStack;
-        public final int totalCount;
-
-        public TrackedItem(Item item, int totalCount) {
-            this.displayStack = new ItemStack(item);
-            this.totalCount = totalCount;
-        }
-    }
+    private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -32,7 +26,6 @@ public class MiscHud {
             return;
         }
 
-        // 1. Core items requested to track
         Item[] targetItems = {
             Items.GOLDEN_APPLE,
             Items.ENDER_PEARL,
@@ -41,8 +34,8 @@ public class MiscHud {
             Items.EXPERIENCE_BOTTLE
         };
 
-        // 2. Tally up totals across the entire inventory (unbound by max stack size limits)
-        List<TrackedItem> itemsToRender = new ArrayList<>();
+        // 1. Tally items across inventory
+        List<ItemStack> itemsToRender = new ArrayList<>();
         int containerSize = player.getInventory().getContainerSize();
 
         for (Item targetItem : targetItems) {
@@ -53,57 +46,90 @@ public class MiscHud {
                     totalCount += slotStack.getCount();
                 }
             }
-            
-            // Only add to rendering queue if the player actually possesses at least one
             if (totalCount > 0) {
-                itemsToRender.add(new TrackedItem(targetItem, totalCount));
+                ItemStack displayStack = new ItemStack(targetItem);
+                // Force raw count past 64 directly into item's stack size container
+                displayStack.setCount(totalCount);
+                itemsToRender.add(displayStack);
             }
         }
 
-        // If the player isn't carrying any of these combat supplies, halt rendering
-        if (itemsToRender.isEmpty()) {
+        if (itemsToRender.isEmpty()) return;
+
+        int screenWidth = minecraft.getWindow().getGuiScaledWidth();
+        int screenHeight = minecraft.getWindow().getGuiScaledHeight();
+        boolean isRightHanded = player.getMainArm() == HumanoidArm.RIGHT;
+
+        int middleX = screenWidth / 2;
+        int baseYPos = screenHeight - 22;
+
+        // 2. Chained calculation logic pushing from Potion Hud
+        int startX;
+        int maxAvailableWidth;
+
+        if (isRightHanded) {
+            if (PotionHud.renderedWidth > 0) {
+                startX = PotionHud.startX + PotionHud.renderedWidth + 7;
+            } else {
+                startX = middleX + 91 + 7;
+            }
+            maxAvailableWidth = screenWidth - startX;
+        } else {
+            int rightBoundary;
+            if (PotionHud.renderedWidth > 0) {
+                rightBoundary = PotionHud.startX - 7;
+            } else {
+                rightBoundary = middleX - 91 - 7;
+            }
+            maxAvailableWidth = rightBoundary;
+            startX = 0; // Derived below dynamically based on auto-shrink sizing
+        }
+
+        // 3. Auto-Shrink columns if screen space runs out
+        int itemsPerRow = 2;
+        while (itemsPerRow > 1 && ((itemsPerRow * 20) + 2) > maxAvailableWidth) {
+            itemsPerRow--;
+        }
+
+        int totalItems = itemsToRender.size();
+        int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
+        
+        int slotsToDraw = Math.min(totalItems, itemsPerRow);
+        int textureWidth = (slotsToDraw * 20) + 1;
+        int finalHudWidth = textureWidth + 1;
+
+        if (!isRightHanded) {
+            startX = maxAvailableWidth - finalHudWidth;
+        }
+
+        if (startX < 0 || (startX + finalHudWidth) > screenWidth) {
             return;
         }
 
-        // 3. Coordinate Positioning Math (Anchor next to the Hotbar / Offhand Slot)
-        int screenWidth = minecraft.getWindow().getGuiScaledWidth();
-        int screenHeight = minecraft.getWindow().getGuiScaledHeight();
-
-        // Hotbar center is screenWidth / 2. 
-        // Vanilla left-edge of the hotbar is at (centerX - 91). 
-        // The offhand slot sits an additional ~29 pixels to the left of the hotbar.
-        int centerX = screenWidth / 2;
-        int anchorX = centerX - 91 - 29 - 18; // Shift left of the offhand bounds safely
-        int anchorY = screenHeight - 22;      // Align baseline height gracefully alongside hotbar slots
-
-        // 4. Render Grid Logic (Max 2 items per row, grows upwards)
-        int itemsPerRow = 2;
-        int slotSpacingX = 22; // Horizontal spacing between icons
-        int slotSpacingY = 20; // Vertical row spacing (pushes rows up as inventory fills)
-
-        for (int i = 0; i < itemsToRender.size(); i++) {
-            TrackedItem tracked = itemsToRender.get(i);
-
-            int row = i / itemsPerRow;
-            int col = i % itemsPerRow;
-
-            // Math layout shifting rows upwards (- row * slotSpacingY)
-            int renderX = anchorX + (col * slotSpacingX);
-            int renderY = anchorY - (row * slotSpacingY);
-
-            // Render raw item sprite without default vanilla number overlay overlays
-            graphics.item(tracked.displayStack, renderX, renderY);
-
-            // Format inventory pool total text
-            String countText = String.valueOf(tracked.totalCount);
+        // 4. Render backdrops
+        int currentY = baseYPos + 22;
+        for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+            int srcV = (totalRows == 1) ? 0 : (rowIndex == 0 ? 1 : (rowIndex == totalRows - 1 ? 0 : 1));
+            int srcHeight = (totalRows == 1) ? 22 : (rowIndex == 0 || rowIndex == totalRows - 1 ? 21 : 20);
             
-            // Calculate accurate positioning offsets matching standard text decoration profiles
-            // Positioned at bottom right quadrant corner relative to the item icon
-            int textX = renderX + 17 - minecraft.font.width(countText);
-            int textY = renderY + 9;
+            currentY -= srcHeight;
+            int rowY = currentY;
 
-            // Render clean, shadow-backed text stack limits
-            RenderUtil.drawScaledText(graphics, countText, 1.0f, textX, textY, 0xFFFFFF, 1.0f, true);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, rowY, 0, srcV, textureWidth, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, rowY, 181, srcV, 1, srcHeight, 182, 22);
+        }
+
+        // 5. Render active items
+        for (int i = 0; i < totalItems; i++) {
+            ItemStack stack = itemsToRender.get(i);
+            int rowIndex = i / itemsPerRow;
+            int slotOffsetIndex = i % itemsPerRow;
+            
+            int itemX = startX + 3 + (slotOffsetIndex * 20);
+            int itemY = (baseYPos + 3) - (rowIndex * 20);
+
+            // Render via standard item utilities, displaying the count overlay identically to standard stack counts
+            RenderUtil.drawScaledItemFactor(graphics, stack, itemX, itemY, 1.0f);
         }
     }
 }

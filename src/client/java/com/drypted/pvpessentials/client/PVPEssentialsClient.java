@@ -33,18 +33,18 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 this.armorHud::render
         );
 
-        // Register Potion HUD
-        HudElementRegistry.attachElementBefore(
-                VanillaHudElements.HOTBAR,
-                Identifier.fromNamespaceAndPath(MOD_ID, "potion_hud"),
-                this.potionHud::render
-        );
-
         // Register Misc HUD
         HudElementRegistry.attachElementBefore(
                 VanillaHudElements.HOTBAR,
                 Identifier.fromNamespaceAndPath(MOD_ID, "misc_hud"),
                 this.miscHud::render
+        );
+
+        // Register Potion HUD
+        HudElementRegistry.attachElementBefore(
+                VanillaHudElements.HOTBAR,
+                Identifier.fromNamespaceAndPath(MOD_ID, "potion_hud"),
+                this.potionHud::render
         );
 
         // Register Damage Given/Taken Crosshair Indicators

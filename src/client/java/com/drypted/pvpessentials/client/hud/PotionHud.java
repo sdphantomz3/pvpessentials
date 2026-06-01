@@ -16,16 +16,21 @@ import java.util.List;
 public class PotionHud {
 
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
-    private static final int ITEMS_PER_ROW = 4; // Keeps uniform layout matching 4 armor slots
+    
+    // Globally exposed to allow MiscHud to properly offset without overlapping
+    public static int renderedWidth = 0;
+    public static int startX = 0;
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
 
-        if (player == null || player.isSpectator())
+        if (player == null || player.isSpectator() || minecraft.options.hideGui) {
+            renderedWidth = 0;
             return;
+        }
 
-        // 1. Scan player inventory and combine identical potion items together
+        // 1. Combine matching potions across the entire inventory
         List<ItemStack> trackedPotions = new ArrayList<>();
         int containerSize = player.getInventory().getContainerSize();
 
@@ -33,7 +38,6 @@ public class PotionHud {
             ItemStack stack = player.getInventory().getItem(i);
             if (!stack.isEmpty() && isPotion(stack)) {
                 boolean combined = false;
-                
                 for (ItemStack tracked : trackedPotions) {
                     if (ItemStack.isSameItemSameComponents(tracked, stack)) {
                         tracked.setCount(tracked.getCount() + stack.getCount());
@@ -41,81 +45,68 @@ public class PotionHud {
                         break;
                     }
                 }
-                
                 if (!combined) {
                     trackedPotions.add(stack.copy());
                 }
             }
         }
 
-        if (trackedPotions.isEmpty()) return;
+        if (trackedPotions.isEmpty()) {
+            renderedWidth = 0;
+            return;
+        }
 
-        // 2. Setup resolution calculations and mirroring dimensions
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int screenHeight = minecraft.getWindow().getGuiScaledHeight();
         boolean isRightHanded = player.getMainArm() == HumanoidArm.RIGHT;
 
         int middleX = screenWidth / 2;
-        int baseYPos = screenHeight - 22; // Baseline hotbar height standard
-        int hudWidth = 82; 
+        int baseYPos = screenHeight - 22;
+
+        // 2. Dynamic auto-shrink columns based on side boundaries
+        int itemsPerRow = 4;
+        int maxAvailableWidth = isRightHanded ? (screenWidth - (middleX + 91 + 7)) : (middleX - 91 - 7);
         
-        // FIX 1: PotionHUD remains stationary, ignoring offhand shifting entirely
-        int startX;
+        while (itemsPerRow > 1 && ((itemsPerRow * 20) + 2) > maxAvailableWidth) {
+            itemsPerRow--;
+        }
+
+        int totalItems = trackedPotions.size();
+        int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
+        
+        int slotsToDraw = Math.min(totalItems, itemsPerRow);
+        int textureWidth = (slotsToDraw * 20) + 1;
+        renderedWidth = textureWidth + 1;
+
         if (isRightHanded) {
-            // Armor HUD is on Left (moves with offhand) -> Potion HUD is anchored on the RIGHT
             startX = middleX + 91 + 7;
         } else {
-            // Armor HUD is on Right (moves with offhand) -> Potion HUD is anchored on the LEFT
-            startX = (middleX - 91 - 7) - hudWidth;
+            startX = (middleX - 91 - 7) - renderedWidth;
         }
 
-        // 3. Compute row counts
-        int totalItems = trackedPotions.size();
-        int totalRows = (int) Math.ceil((double) totalItems / ITEMS_PER_ROW);
-
-        // FIX 2: Slicing texture coordinates dynamically to build "One Big Connected Container"
-        int currentY = baseYPos + 22; // Track bottom-up boundary rendering cursor
-
+        // 3. Render hotbar sliced grid backdrops
+        int currentY = baseYPos + 22;
         for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
-            int srcV;
-            int srcHeight;
+            int srcV = (totalRows == 1) ? 0 : (rowIndex == 0 ? 1 : (rowIndex == totalRows - 1 ? 0 : 1));
+            int srcHeight = (totalRows == 1) ? 22 : (rowIndex == 0 || rowIndex == totalRows - 1 ? 21 : 20);
             
-            if (totalRows == 1) {
-                srcV = 0;
-                srcHeight = 22; // Default full hotbar texture size
-            } else if (rowIndex == 0) {
-                // Bottom row: Keep bottom border shadow, shave off top inner border row
-                srcV = 1;
-                srcHeight = 21;
-            } else if (rowIndex == totalRows - 1) {
-                // Top row: Keep top shiny highlight border, shave off bottom inner border row
-                srcV = 0;
-                srcHeight = 21;
-            } else {
-                // Middle rows: Shave off both top and bottom outer border pixel tracks
-                srcV = 1;
-                srcHeight = 20;
-            }
-            
-            currentY -= srcHeight; // Seamlessly shift cursor up by the exact sliced pixel height
+            currentY -= srcHeight;
             int rowY = currentY;
 
-            // Render the continuous frame textures
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, rowY, 0, srcV, 81, srcHeight, 182, 22);
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + 81, rowY, 181, srcV, 1, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, rowY, 0, srcV, textureWidth, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, rowY, 181, srcV, 1, srcHeight, 182, 22);
         }
 
-        // 4. Render items on top using a fixed grid coordinate offset tracking
+        // 4. Render items (Count overlay drawn natively via item factor)
         for (int i = 0; i < totalItems; i++) {
             ItemStack potionStack = trackedPotions.get(i);
-            
-            int rowIndex = i / ITEMS_PER_ROW;
-            int slotOffsetIndex = i % ITEMS_PER_ROW;
+            int rowIndex = i / itemsPerRow;
+            int slotOffsetIndex = i % itemsPerRow;
             
             int itemX = startX + 3 + (slotOffsetIndex * 20);
-            // Uses fixed absolute mathematical grid alignment independent of the texture row slices
             int itemY = (baseYPos + 3) - (rowIndex * 20);
 
+            // Using vanilla item rendering with combined total counts
             RenderUtil.drawScaledItemFactor(graphics, potionStack, itemX, itemY, 1.0f);
         }
     }
