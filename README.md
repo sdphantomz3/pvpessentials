@@ -1,4 +1,4 @@
-# PVP Essentials
+![Banner](https://cdn.modrinth.com/data/cached_images/114171063369d3d5bb2e4c825a280e958865ebf3_0.webp)
 **Essential client-side PvP features, including armor, potion, and arrow HUDs, damage indicators, and much more!**
 
 Version Compatability: 
@@ -18,7 +18,7 @@ Version Compatability:
 </p>
 
 ---
-
+![Showcases all the features of the mod.](https://cdn.modrinth.com/data/cached_images/1289ab10e5ddb311ee2c1d815d9c698079f9eabf_0.webp)
 | Feature | Description |
 |----------|-------------|
 | **Armor HUD** | Displays equipped armor and it's durability |
