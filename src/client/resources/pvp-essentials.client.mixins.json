@@ -1,9 +1,8 @@
 {
 	"required": true,
 	"package": "com.drypted.pvpessentials.client.mixin",
-	"compatibilityLevel": "JAVA_25",
+	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"ExampleClientMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
