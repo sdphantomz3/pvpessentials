@@ -3,9 +3,9 @@ package com.drypted.pvpessentials.client.hud;
 import com.drypted.pvpessentials.client.util.RenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -15,7 +15,7 @@ import java.util.List;
 
 public class PotionHud {
 
-    private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
+    private static final ResourceLocation HOTBAR_TEXTURE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
     
     // Globally exposed to allow MiscHud to properly offset without overlapping
     public static int renderedWidth = 0;
@@ -93,8 +93,8 @@ public class PotionHud {
             currentY -= srcHeight;
             int rowY = currentY;
 
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, rowY, 0, srcV, textureWidth, srcHeight, 182, 22);
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, rowY, 181, srcV, 1, srcHeight, 182, 22);
+            graphics.blit(RenderType::guiTextured, HOTBAR_TEXTURE, startX, rowY, 0, srcV, textureWidth, srcHeight, 182, 22);
+            graphics.blit(RenderType::guiTextured, HOTBAR_TEXTURE, startX + textureWidth, rowY, 181, srcV, 1, srcHeight, 182, 22);
         }
 
         // 4. Render items (Count overlay drawn natively via item factor)

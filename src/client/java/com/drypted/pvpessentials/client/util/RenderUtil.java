@@ -1,19 +1,20 @@
 package com.drypted.pvpessentials.client.util;
 
+import org.jetbrains.annotations.NotNull;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
-import org.jspecify.annotations.NonNull;
 
 public class RenderUtil {
 
-    public static void drawScaledItemFactor(GuiGraphics g, @NonNull ItemStack stack, int x, int y, float scaleFactor) {
-        g.pose().pushMatrix();
-        g.pose().translate(x, y);
-        g.pose().scale(scaleFactor, scaleFactor);
+    public static void drawScaledItemFactor(GuiGraphics g, @NotNull ItemStack stack, int x, int y, float scaleFactor) {
+        g.pose().pushPose();
+        g.pose().translate((float) x, (float) y, 0.0f);
+        g.pose().scale(scaleFactor, scaleFactor, 1.0f);
         g.renderItem(stack, 0, 0);
         g.renderItemDecorations(Minecraft.getInstance().font, stack, 0, 0);
-        g.pose().popMatrix();
+        g.pose().popPose();
     }
 
     /**
@@ -32,11 +33,11 @@ public class RenderUtil {
         
         int finalColor = (a << 24) | (r << 16) | (gChan << 8) | b;
 
-        g.pose().pushMatrix();
-        g.pose().translate(x, y);
-        g.pose().scale(scale, scale);
+        g.pose().pushPose();
+        g.pose().translate((float) x, (float) y, 0.0f);
+        g.pose().scale(scale, scale, 1.0f);
         // Updated to use the documented graphics.text method
         g.drawString(Minecraft.getInstance().font, text, 0, 0, finalColor, drawShadow);
-        g.pose().popMatrix();
+        g.pose().popPose();
     }
 }

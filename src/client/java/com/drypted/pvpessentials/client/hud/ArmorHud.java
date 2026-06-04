@@ -3,9 +3,9 @@ package com.drypted.pvpessentials.client.hud;
 import com.drypted.pvpessentials.client.util.RenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.DeltaTracker;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -17,7 +17,7 @@ public class ArmorHud {
     // Configuration Toggle
     private static final boolean START_WITH_HEAD = true;
 
-    private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
+    private static final ResourceLocation HOTBAR_TEXTURE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
 
     public void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -70,8 +70,8 @@ public class ArmorHud {
         }
 
         // Draw HUD background frame
-        graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, yPos, 0, 0, 81, 22, 182, 22);
-        graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + 81, yPos, 181, 0, 1, 22, 182, 22);
+        graphics.blit(RenderType::guiTextured, HOTBAR_TEXTURE, startX, yPos, 0, 0, 81, 22, 182, 22);
+        graphics.blit(RenderType::guiTextured, HOTBAR_TEXTURE, startX + 81, yPos, 181, 0, 1, 22, 182, 22);
 
         // Render active equipment items
         for (int i = 0; i < armorItems.size(); i++) {
