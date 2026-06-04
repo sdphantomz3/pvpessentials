@@ -2,7 +2,7 @@ package com.drypted.pvpessentials.client.hud;
 
 import com.drypted.pvpessentials.client.util.RenderUtil;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -11,7 +11,7 @@ import net.minecraft.world.item.ProjectileWeaponItem;
 
 public class ArrowHud {
 
-    public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+    public void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
 
@@ -67,7 +67,7 @@ public class ArrowHud {
         int renderY = centerY - 8;
 
         // 5. Render the raw item sprite WITHOUT vanilla decorations/durability bars
-        graphics.item(projectileStack, renderX, renderY);
+        graphics.renderItem(projectileStack, renderX, renderY);
 
         // 6. Draw the text count using your RenderUtil engine
         String countText = player.isCreative() ? "∞" : String.valueOf(totalAmmoCount);
