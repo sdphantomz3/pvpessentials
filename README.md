@@ -1,9 +1,12 @@
 ![Banner](https://cdn.modrinth.com/data/cached_images/114171063369d3d5bb2e4c825a280e958865ebf3_0.webp)
 **Essential client-side PvP features, including armor, potion, and arrow HUDs, damage indicators, and much more!**
 
-Version Compatability: 
+Version Compatability:
+- 26.2 (Fabric)
 - 26.1.2 (Fabric)
-- 1.21.x version will soon be released!
+- 1.21.11 (Fabric)
+- 1.21.4 (Fabric)
+- 1.21.1 (Fabric)
 
 ---
 
