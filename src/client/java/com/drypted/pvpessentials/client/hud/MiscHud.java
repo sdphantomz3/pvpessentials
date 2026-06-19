@@ -22,7 +22,7 @@ public class MiscHud {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
 
-        if (player == null || player.isSpectator() || minecraft.options.hideGui) {
+        if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) {
             return;
         }
 
