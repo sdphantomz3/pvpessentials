@@ -13,52 +13,47 @@ import net.minecraft.resources.Identifier;
 
 public class PVPEssentialsClient implements ClientModInitializer {
 
-    public static final String MOD_ID = "pvpessentials";
-    
-    private final ArmorHud armorHud = new ArmorHud();
-    private final PotionHud potionHud = new PotionHud();
-    private final DamageIndicatorHud damageIndicatorHud = new DamageIndicatorHud();
-    private final ArrowHud arrowHud = new ArrowHud();
-    private final MiscHud miscHud = new MiscHud();
+        public static final String MOD_ID = "pvpessentials";
 
-    @Override
-    public void onInitializeClient() {
-        // Initialize background tick trackers
-        DamageTracker.initialize();
+        private final ArmorHud armorHud = new ArmorHud();
+        private final PotionHud potionHud = new PotionHud();
+        private final DamageIndicatorHud damageIndicatorHud = new DamageIndicatorHud();
+        private final ArrowHud arrowHud = new ArrowHud();
+        private final MiscHud miscHud = new MiscHud();
 
-        // Register Armor HUD
-        HudElementRegistry.attachElementBefore(
-                VanillaHudElements.HOTBAR,
-                Identifier.fromNamespaceAndPath(MOD_ID, "armor_hud"),
-                this.armorHud::render
-        );
+        @Override
+        public void onInitializeClient() {
+                // Initialize background tick trackers
+                DamageTracker.initialize();
 
-        // Register Misc HUD
-        HudElementRegistry.attachElementBefore(
-                VanillaHudElements.HOTBAR,
-                Identifier.fromNamespaceAndPath(MOD_ID, "misc_hud"),
-                this.miscHud::render
-        );
+                // Register Armor HUD
+                HudElementRegistry.attachElementBefore(
+                                VanillaHudElements.HOTBAR,
+                                Identifier.fromNamespaceAndPath(MOD_ID, "armor_hud"),
+                                this.armorHud::render);
 
-        // Register Potion HUD
-        HudElementRegistry.attachElementBefore(
-                VanillaHudElements.HOTBAR,
-                Identifier.fromNamespaceAndPath(MOD_ID, "potion_hud"),
-                this.potionHud::render
-        );
+                // Register Misc HUD
+                HudElementRegistry.attachElementBefore(
+                                VanillaHudElements.HOTBAR,
+                                Identifier.fromNamespaceAndPath(MOD_ID, "misc_hud"),
+                                this.miscHud::render);
 
-        // Register Damage Given/Taken Crosshair Indicators
-        HudElementRegistry.attachElementBefore(
-                VanillaHudElements.CROSSHAIR,
-                Identifier.fromNamespaceAndPath(MOD_ID, "damage_indicators"),
-                this.damageIndicatorHud::render
-        );
+                // Register Potion HUD
+                HudElementRegistry.attachElementBefore(
+                                VanillaHudElements.HOTBAR,
+                                Identifier.fromNamespaceAndPath(MOD_ID, "potion_hud"),
+                                this.potionHud::render);
 
-        // Register Arrow HUD
-        HudElementRegistry.attachElementBefore(
-                VanillaHudElements.CROSSHAIR,
-                Identifier.fromNamespaceAndPath(MOD_ID, "arrow_hud"),
-                this.arrowHud::render
-        );
-    }
+                // Register Damage Given/Taken Crosshair Indicators
+                HudElementRegistry.attachElementBefore(
+                                VanillaHudElements.CROSSHAIR,
+                                Identifier.fromNamespaceAndPath(MOD_ID, "damage_indicators"),
+                                this.damageIndicatorHud::render);
+
+                // Register Arrow HUD
+                HudElementRegistry.attachElementBefore(
+                                VanillaHudElements.CROSSHAIR,
+                                Identifier.fromNamespaceAndPath(MOD_ID, "arrow_hud"),
+                                this.arrowHud::render);
+        }
 }
