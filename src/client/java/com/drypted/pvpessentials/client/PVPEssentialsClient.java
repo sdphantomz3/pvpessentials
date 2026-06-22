@@ -1,5 +1,6 @@
 package com.drypted.pvpessentials.client;
 
+import com.drypted.dlib.client.config.ConfigManager;
 import com.drypted.pvpessentials.client.handler.DamageTracker;
 import com.drypted.pvpessentials.client.hud.ArmorHud;
 import com.drypted.pvpessentials.client.hud.DamageIndicatorHud;
@@ -21,8 +22,16 @@ public class PVPEssentialsClient implements ClientModInitializer {
         private final ArrowHud arrowHud = new ArrowHud();
         private final MiscHud miscHud = new MiscHud();
 
+        public void createConfig() {
+                ConfigManager.registerOption(MOD_ID, "Armor HUD", "Start with Head", "toggle", "false", null);
+
+                ConfigManager.load();
+        }
+
         @Override
         public void onInitializeClient() {
+                createConfig();
+
                 // Initialize background tick trackers
                 DamageTracker.initialize();
 

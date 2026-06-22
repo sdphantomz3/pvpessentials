@@ -1,5 +1,7 @@
 package com.drypted.pvpessentials.client.hud;
 
+import com.drypted.dlib.client.config.ConfigManager;
+import com.drypted.pvpessentials.client.PVPEssentialsClient;
 import com.drypted.pvpessentials.client.util.RenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -15,7 +17,9 @@ import java.util.List;
 public class ArmorHud {
 
     // Configuration Toggle
-    private static final boolean START_WITH_HEAD = true;
+    private boolean shouldStartWithHead() {
+        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Armor HUD", "Start with Head");
+    }
 
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
 
@@ -27,7 +31,7 @@ public class ArmorHud {
             return;
 
         // Gather armor pieces based on preference configuration
-        List<ItemStack> armorItems = START_WITH_HEAD ? List.of(
+        List<ItemStack> armorItems = shouldStartWithHead() ? List.of(
             player.getItemBySlot(EquipmentSlot.HEAD),
             player.getItemBySlot(EquipmentSlot.CHEST),
             player.getItemBySlot(EquipmentSlot.LEGS),
