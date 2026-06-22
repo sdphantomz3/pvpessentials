@@ -1,5 +1,7 @@
 package com.drypted.pvpessentials.client.hud;
 
+import com.drypted.dlib.client.config.ConfigManager;
+import com.drypted.pvpessentials.client.PVPEssentialsClient;
 import com.drypted.pvpessentials.client.util.RenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -18,26 +20,36 @@ public class MiscHud {
 
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
 
+    private boolean isEnabled() {
+        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Misc HUD", "Enabled");
+    }
+
+    private String getSide() {
+        return ConfigManager.getString(PVPEssentialsClient.MOD_ID, "Misc HUD", "Side");
+    }
+
+    private int getVerticalOffset() {
+        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Misc HUD", "Vertical Offset");
+    }
+
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+        if (!isEnabled()) return;
+
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
 
-        if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) {
-            return;
-        }
+        if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) return;
 
         Item[] targetItems = {
-            Items.GOLDEN_APPLE,
-            Items.ENDER_PEARL,
-            Items.COBWEB,
-            Items.ENCHANTED_GOLDEN_APPLE,
-            Items.EXPERIENCE_BOTTLE
+                Items.GOLDEN_APPLE,
+                Items.ENDER_PEARL,
+                Items.COBWEB,
+                Items.ENCHANTED_GOLDEN_APPLE,
+                Items.EXPERIENCE_BOTTLE
         };
 
-        // 1. Tally items across inventory
         List<ItemStack> itemsToRender = new ArrayList<>();
         int containerSize = player.getInventory().getContainerSize();
-
         for (Item targetItem : targetItems) {
             int totalCount = 0;
             for (int i = 0; i < containerSize; i++) {
@@ -48,7 +60,6 @@ public class MiscHud {
             }
             if (totalCount > 0) {
                 ItemStack displayStack = new ItemStack(targetItem);
-                // Force raw count past 64 directly into item's stack size container
                 displayStack.setCount(totalCount);
                 itemsToRender.add(displayStack);
             }
@@ -61,31 +72,23 @@ public class MiscHud {
         boolean isRightHanded = player.getMainArm() == HumanoidArm.RIGHT;
 
         int middleX = screenWidth / 2;
-        int baseYPos = screenHeight - 22;
+        int baseYPos = screenHeight - 22 + getVerticalOffset();
 
-        // 2. Chained calculation logic pushing from Potion Hud
-        int startX;
+        String side = getSide();
+        boolean forceLeft = side.equals("Left");
+        boolean forceRight = side.equals("Right");
+        boolean auto = side.equals("Auto");
+
         int maxAvailableWidth;
-
-        if (isRightHanded) {
-            if (PotionHud.renderedWidth > 0) {
-                startX = PotionHud.startX + PotionHud.renderedWidth + 7;
-            } else {
-                startX = middleX + 91 + 7;
-            }
-            maxAvailableWidth = screenWidth - startX;
+        if (forceLeft) {
+            maxAvailableWidth = middleX - 10;
+        } else if (forceRight) {
+            maxAvailableWidth = screenWidth - (middleX + 10);
         } else {
-            int rightBoundary;
-            if (PotionHud.renderedWidth > 0) {
-                rightBoundary = PotionHud.startX - 7;
-            } else {
-                rightBoundary = middleX - 91 - 7;
-            }
-            maxAvailableWidth = rightBoundary;
-            startX = 0; // Derived below dynamically based on auto-shrink sizing
+            maxAvailableWidth = isRightHanded ? (screenWidth - (middleX + 91 + 7)) : (middleX - 91 - 7);
+            if (maxAvailableWidth < 0) maxAvailableWidth = 40;
         }
 
-        // 3. Auto-Shrink columns if screen space runs out
         int itemsPerRow = 2;
         while (itemsPerRow > 1 && ((itemsPerRow * 20) + 2) > maxAvailableWidth) {
             itemsPerRow--;
@@ -93,42 +96,39 @@ public class MiscHud {
 
         int totalItems = itemsToRender.size();
         int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
-        
         int slotsToDraw = Math.min(totalItems, itemsPerRow);
         int textureWidth = (slotsToDraw * 20) + 1;
-        int finalHudWidth = textureWidth + 1;
+        int renderedWidth = textureWidth + 1;
 
-        if (!isRightHanded) {
-            startX = maxAvailableWidth - finalHudWidth;
+        int startX;
+        if (forceLeft) {
+            startX = 10;
+        } else if (forceRight) {
+            startX = screenWidth - 10 - renderedWidth;
+        } else {
+            if (isRightHanded) {
+                startX = middleX + 91 + 7;
+            } else {
+                startX = (middleX - 91 - 7) - renderedWidth;
+            }
         }
+        startX = Math.max(2, Math.min(startX, screenWidth - renderedWidth - 2));
 
-        if (startX < 0 || (startX + finalHudWidth) > screenWidth) {
-            return;
-        }
-
-        // 4. Render backdrops
         int currentY = baseYPos + 22;
         for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
             int srcV = (totalRows == 1) ? 0 : (rowIndex == 0 ? 1 : (rowIndex == totalRows - 1 ? 0 : 1));
             int srcHeight = (totalRows == 1) ? 22 : (rowIndex == 0 || rowIndex == totalRows - 1 ? 21 : 20);
-            
             currentY -= srcHeight;
-            int rowY = currentY;
-
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, rowY, 0, srcV, textureWidth, srcHeight, 182, 22);
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, rowY, 181, srcV, 1, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, currentY, 0, srcV, textureWidth, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
         }
 
-        // 5. Render active items
         for (int i = 0; i < totalItems; i++) {
             ItemStack stack = itemsToRender.get(i);
             int rowIndex = i / itemsPerRow;
-            int slotOffsetIndex = i % itemsPerRow;
-            
-            int itemX = startX + 3 + (slotOffsetIndex * 20);
+            int slotOffset = i % itemsPerRow;
+            int itemX = startX + 3 + (slotOffset * 20);
             int itemY = (baseYPos + 3) - (rowIndex * 20);
-
-            // Render via standard item utilities, displaying the count overlay identically to standard stack counts
             RenderUtil.drawScaledItemFactor(graphics, stack, itemX, itemY, 1.0f);
         }
     }

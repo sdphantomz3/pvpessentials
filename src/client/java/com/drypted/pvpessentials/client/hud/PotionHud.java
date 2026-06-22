@@ -1,5 +1,7 @@
 package com.drypted.pvpessentials.client.hud;
 
+import com.drypted.dlib.client.config.ConfigManager;
+import com.drypted.pvpessentials.client.PVPEssentialsClient;
 import com.drypted.pvpessentials.client.util.RenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -16,24 +18,30 @@ import java.util.List;
 public class PotionHud {
 
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
-    
-    // Globally exposed to allow MiscHud to properly offset without overlapping
-    public static int renderedWidth = 0;
-    public static int startX = 0;
+
+    private boolean isEnabled() {
+        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Potion HUD", "Enabled");
+    }
+
+    private String getSide() {
+        return ConfigManager.getString(PVPEssentialsClient.MOD_ID, "Potion HUD", "Side");
+    }
+
+    private int getVerticalOffset() {
+        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Potion HUD", "Vertical Offset");
+    }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+        if (!isEnabled()) return;
+
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
 
-        if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) {
-            renderedWidth = 0;
-            return;
-        }
+        if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) return;
 
-        // 1. Combine matching potions across the entire inventory
+        // Collect potions
         List<ItemStack> trackedPotions = new ArrayList<>();
         int containerSize = player.getInventory().getContainerSize();
-
         for (int i = 0; i < containerSize; i++) {
             ItemStack stack = player.getInventory().getItem(i);
             if (!stack.isEmpty() && isPotion(stack)) {
@@ -51,62 +59,75 @@ public class PotionHud {
             }
         }
 
-        if (trackedPotions.isEmpty()) {
-            renderedWidth = 0;
-            return;
-        }
+        if (trackedPotions.isEmpty()) return;
 
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int screenHeight = minecraft.getWindow().getGuiScaledHeight();
         boolean isRightHanded = player.getMainArm() == HumanoidArm.RIGHT;
 
         int middleX = screenWidth / 2;
-        int baseYPos = screenHeight - 22;
+        int baseYPos = screenHeight - 22 + getVerticalOffset();
 
-        // 2. Dynamic auto-shrink columns based on side boundaries
+        // Determine side
+        String side = getSide();
+        boolean forceLeft = side.equals("Left");
+        boolean forceRight = side.equals("Right");
+        boolean auto = side.equals("Auto");
+
         int itemsPerRow = 4;
-        int maxAvailableWidth = isRightHanded ? (screenWidth - (middleX + 91 + 7)) : (middleX - 91 - 7);
-        
+        int maxAvailableWidth;
+        if (forceLeft) {
+            maxAvailableWidth = middleX - 10;
+        } else if (forceRight) {
+            maxAvailableWidth = screenWidth - (middleX + 10);
+        } else { // Auto
+            maxAvailableWidth = isRightHanded ? (screenWidth - (middleX + 91 + 7)) : (middleX - 91 - 7);
+            // ensure positive
+            if (maxAvailableWidth < 0) maxAvailableWidth = 40;
+        }
+
         while (itemsPerRow > 1 && ((itemsPerRow * 20) + 2) > maxAvailableWidth) {
             itemsPerRow--;
         }
 
         int totalItems = trackedPotions.size();
         int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
-        
         int slotsToDraw = Math.min(totalItems, itemsPerRow);
         int textureWidth = (slotsToDraw * 20) + 1;
-        renderedWidth = textureWidth + 1;
+        int renderedWidth = textureWidth + 1;
 
-        if (isRightHanded) {
-            startX = middleX + 91 + 7;
-        } else {
-            startX = (middleX - 91 - 7) - renderedWidth;
+        int startX;
+        if (forceLeft) {
+            startX = 10;
+        } else if (forceRight) {
+            startX = screenWidth - 10 - renderedWidth;
+        } else { // Auto
+            if (isRightHanded) {
+                startX = middleX + 91 + 7;
+            } else {
+                startX = (middleX - 91 - 7) - renderedWidth;
+            }
         }
+        // Clamp
+        startX = Math.max(2, Math.min(startX, screenWidth - renderedWidth - 2));
 
-        // 3. Render hotbar sliced grid backdrops
+        // Render backdrop rows
         int currentY = baseYPos + 22;
         for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
             int srcV = (totalRows == 1) ? 0 : (rowIndex == 0 ? 1 : (rowIndex == totalRows - 1 ? 0 : 1));
             int srcHeight = (totalRows == 1) ? 22 : (rowIndex == 0 || rowIndex == totalRows - 1 ? 21 : 20);
-            
             currentY -= srcHeight;
-            int rowY = currentY;
-
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, rowY, 0, srcV, textureWidth, srcHeight, 182, 22);
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, rowY, 181, srcV, 1, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, currentY, 0, srcV, textureWidth, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
         }
 
-        // 4. Render items (Count overlay drawn natively via item factor)
+        // Render items
         for (int i = 0; i < totalItems; i++) {
             ItemStack potionStack = trackedPotions.get(i);
             int rowIndex = i / itemsPerRow;
-            int slotOffsetIndex = i % itemsPerRow;
-            
-            int itemX = startX + 3 + (slotOffsetIndex * 20);
+            int slotOffset = i % itemsPerRow;
+            int itemX = startX + 3 + (slotOffset * 20);
             int itemY = (baseYPos + 3) - (rowIndex * 20);
-
-            // Using vanilla item rendering with combined total counts
             RenderUtil.drawScaledItemFactor(graphics, potionStack, itemX, itemY, 1.0f);
         }
     }

@@ -18,7 +18,7 @@ public class DamageTracker {
         public final boolean isDamageTaken; 
         public final float amount;
         public int currentAgeTicks = 0;
-        public final int maxAgeTicks = 22; 
+        public int maxAgeTicks = 22; 
         public final double horizontalSpawnOffset;
         public final double verticalSpawnOffset;
         public final float rotationDegrees; 
