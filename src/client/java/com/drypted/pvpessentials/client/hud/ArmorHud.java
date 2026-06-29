@@ -19,19 +19,26 @@ public class ArmorHud {
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
 
     private boolean isEnabled() {
-        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Armor HUD", "Enabled");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARMOR_ENABLED);
+        return opt != null && Boolean.parseBoolean(opt.value);
     }
 
     private boolean startWithHead() {
-        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Armor HUD", "Start with Head");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARMOR_START_WITH_HEAD);
+        return opt != null && Boolean.parseBoolean(opt.value);
     }
 
     private String getSide() {
-        return ConfigManager.getString(PVPEssentialsClient.MOD_ID, "Armor HUD", "Side");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARMOR_SIDE);
+        return opt != null ? opt.value : "Auto";
     }
 
     private int getVerticalOffset() {
-        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Armor HUD", "Vertical Offset");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARMOR_VERTICAL_OFFSET);
+        if (opt != null) {
+            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+        }
+        return 0;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
@@ -67,7 +74,6 @@ public class ArmorHud {
         int yPos = screenHeight - 22 + getVerticalOffset();
         int hudWidth = 82;
 
-        // Determine side based on config
         String side = getSide();
         boolean forceLeft = side.equals("Left");
         boolean forceRight = side.equals("Right");
@@ -75,9 +81,9 @@ public class ArmorHud {
 
         int startX;
         if (forceLeft) {
-            startX = 10; // simple left margin
+            startX = 10;
         } else if (forceRight) {
-            startX = screenWidth - 10 - hudWidth - 4; // right margin
+            startX = screenWidth - 10 - hudWidth - 4;
         } else { // Auto
             if (isRightHanded) {
                 startX = hasOffhand ? (middleX - 120 - 7 - hudWidth) : (middleX - 91 - 7 - hudWidth);
@@ -86,7 +92,6 @@ public class ArmorHud {
             }
         }
 
-        // Clamp to screen bounds
         startX = Math.max(2, Math.min(startX, screenWidth - hudWidth - 2));
 
         graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, yPos, 0, 0, 81, 22, 182, 22);

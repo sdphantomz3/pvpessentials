@@ -21,15 +21,21 @@ public class MiscHud {
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
 
     private boolean isEnabled() {
-        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Misc HUD", "Enabled");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_MISC_ENABLED);
+        return opt != null && Boolean.parseBoolean(opt.value);
     }
 
     private String getSide() {
-        return ConfigManager.getString(PVPEssentialsClient.MOD_ID, "Misc HUD", "Side");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_MISC_SIDE);
+        return opt != null ? opt.value : "Auto";
     }
 
     private int getVerticalOffset() {
-        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Misc HUD", "Vertical Offset");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_MISC_VERTICAL_OFFSET);
+        if (opt != null) {
+            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+        }
+        return 0;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

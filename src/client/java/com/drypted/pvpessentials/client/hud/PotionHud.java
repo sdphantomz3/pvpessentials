@@ -20,15 +20,21 @@ public class PotionHud {
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
 
     private boolean isEnabled() {
-        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Potion HUD", "Enabled");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_POTION_ENABLED);
+        return opt != null && Boolean.parseBoolean(opt.value);
     }
 
     private String getSide() {
-        return ConfigManager.getString(PVPEssentialsClient.MOD_ID, "Potion HUD", "Side");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_POTION_SIDE);
+        return opt != null ? opt.value : "Auto";
     }
 
     private int getVerticalOffset() {
-        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Potion HUD", "Vertical Offset");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_POTION_VERTICAL_OFFSET);
+        if (opt != null) {
+            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+        }
+        return 0;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
@@ -68,7 +74,6 @@ public class PotionHud {
         int middleX = screenWidth / 2;
         int baseYPos = screenHeight - 22 + getVerticalOffset();
 
-        // Determine side
         String side = getSide();
         boolean forceLeft = side.equals("Left");
         boolean forceRight = side.equals("Right");
@@ -82,7 +87,6 @@ public class PotionHud {
             maxAvailableWidth = screenWidth - (middleX + 10);
         } else { // Auto
             maxAvailableWidth = isRightHanded ? (screenWidth - (middleX + 91 + 7)) : (middleX - 91 - 7);
-            // ensure positive
             if (maxAvailableWidth < 0) maxAvailableWidth = 40;
         }
 
@@ -108,10 +112,8 @@ public class PotionHud {
                 startX = (middleX - 91 - 7) - renderedWidth;
             }
         }
-        // Clamp
         startX = Math.max(2, Math.min(startX, screenWidth - renderedWidth - 2));
 
-        // Render backdrop rows
         int currentY = baseYPos + 22;
         for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
             int srcV = (totalRows == 1) ? 0 : (rowIndex == 0 ? 1 : (rowIndex == totalRows - 1 ? 0 : 1));
@@ -121,7 +123,6 @@ public class PotionHud {
             graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
         }
 
-        // Render items
         for (int i = 0; i < totalItems; i++) {
             ItemStack potionStack = trackedPotions.get(i);
             int rowIndex = i / itemsPerRow;

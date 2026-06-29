@@ -16,19 +16,29 @@ public class DamageIndicatorHud {
     private static final Identifier HEART_CONTAINER_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/heart/container.png");
 
     private boolean isEnabled() {
-        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Damage Indicator", "Enabled");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_DAMAGE_ENABLED);
+        return opt != null && Boolean.parseBoolean(opt.value);
     }
 
     private boolean isHeartsMode() {
-        return ConfigManager.getString(PVPEssentialsClient.MOD_ID, "Damage Indicator", "Display Mode").equals("Hearts");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_DAMAGE_DISPLAY_MODE);
+        return opt != null && opt.value.equals("Hearts");
     }
 
     private float getScale() {
-        return (float) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Damage Indicator", "Scale");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_DAMAGE_SCALE);
+        if (opt != null) {
+            try { return Float.parseFloat(opt.value); } catch (NumberFormatException ignored) {}
+        }
+        return 1.2f;
     }
 
     private int getLifetime() {
-        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Damage Indicator", "Lifetime (ticks)");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_DAMAGE_LIFETIME);
+        if (opt != null) {
+            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+        }
+        return 22;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
@@ -47,7 +57,6 @@ public class DamageIndicatorHud {
         int maxAge = getLifetime();
 
         for (DamageTracker.IndicatorInstance ind : DamageTracker.getActiveIndicators()) {
-            // Override lifetime from config
             ind.maxAgeTicks = maxAge;
 
             float progress = (float) ind.currentAgeTicks / ind.maxAgeTicks;
@@ -68,7 +77,6 @@ public class DamageIndicatorHud {
             graphics.pose().translate(renderX, renderY);
             graphics.pose().scale(scale, scale);
 
-            // Heart sprite
             graphics.pose().pushMatrix();
             graphics.pose().translate(-7.5f, 0.5f);
             float rotationRadians = (float) Math.toRadians(ind.rotationDegrees);
@@ -82,7 +90,6 @@ public class DamageIndicatorHud {
             }
             graphics.pose().popMatrix();
 
-            // Text
             int textColor = ind.isDamageTaken ? 0xFF5555 : 0xFFFFFF;
             RenderUtil.drawScaledText(graphics, hitText, 0.75f, 0, 0, textColor, alpha, true);
 

@@ -14,15 +14,24 @@ import net.minecraft.world.item.ProjectileWeaponItem;
 public class ArrowHud {
 
     private boolean isEnabled() {
-        return ConfigManager.getBoolean(PVPEssentialsClient.MOD_ID, "Arrow HUD", "Enabled");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARROW_ENABLED);
+        return opt != null && Boolean.parseBoolean(opt.value);
     }
 
     private int getHorizontalOffset() {
-        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Arrow HUD", "Horizontal Offset");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARROW_HORIZONTAL_OFFSET);
+        if (opt != null) {
+            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+        }
+        return 12;
     }
 
     private int getVerticalOffset() {
-        return (int) ConfigManager.getNumber(PVPEssentialsClient.MOD_ID, "Arrow HUD", "Vertical Offset");
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARROW_VERTICAL_OFFSET);
+        if (opt != null) {
+            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+        }
+        return 0;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
