@@ -3,6 +3,8 @@ package com.drypted.pvpessentials.client.hud;
 import com.drypted.dlib.client.config.ConfigManager;
 import com.drypted.pvpessentials.client.PVPEssentialsClient;
 import com.drypted.pvpessentials.client.util.RenderUtil;
+import com.drypted.pvpessentials.client.util.HudLayoutManager;
+import com.drypted.pvpessentials.client.util.HudLayoutManager.Anchor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.DeltaTracker;
@@ -26,7 +28,7 @@ public class PotionHud {
 
     private String getSide() {
         var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_POTION_SIDE);
-        return opt != null ? opt.value : "Auto";
+        return opt != null ? opt.value : "HOTBAR";
     }
 
     private int getVerticalOffset() {
@@ -45,7 +47,6 @@ public class PotionHud {
 
         if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) return;
 
-        // Collect potions
         List<ItemStack> trackedPotions = new ArrayList<>();
         int containerSize = player.getInventory().getContainerSize();
         for (int i = 0; i < containerSize; i++) {
@@ -72,47 +73,55 @@ public class PotionHud {
         boolean isRightHanded = player.getMainArm() == HumanoidArm.RIGHT;
 
         int middleX = screenWidth / 2;
-        int baseYPos = screenHeight - 22 + getVerticalOffset();
+        int hotbarLeftEdge = middleX - 91 - 7;
+        int hotbarRightEdge = middleX + 91 + 7;
+        int yBase = screenHeight - 22 + getVerticalOffset();
 
         String side = getSide();
-        boolean forceLeft = side.equals("Left");
-        boolean forceRight = side.equals("Right");
-        boolean auto = side.equals("Auto");
-
-        int itemsPerRow = 4;
-        int maxAvailableWidth;
-        if (forceLeft) {
-            maxAvailableWidth = middleX - 10;
-        } else if (forceRight) {
-            maxAvailableWidth = screenWidth - (middleX + 10);
-        } else { // Auto
-            maxAvailableWidth = isRightHanded ? (screenWidth - (middleX + 91 + 7)) : (middleX - 91 - 7);
-            if (maxAvailableWidth < 0) maxAvailableWidth = 40;
+        Anchor anchor;
+        if (side.equals("Left")) {
+            anchor = Anchor.SCREEN_LEFT;
+        } else if (side.equals("Right")) {
+            anchor = Anchor.SCREEN_RIGHT;
+        } else {
+            anchor = isRightHanded ? Anchor.HOTBAR_RIGHT : Anchor.HOTBAR_LEFT;
         }
 
-        while (itemsPerRow > 1 && ((itemsPerRow * 20) + 2) > maxAvailableWidth) {
-            itemsPerRow--;
-        }
+        // Dynamic column count - based on zone width (deterministic!)
+        int maxCols = HudLayoutManager.getMaxColumns(anchor, 20);
+        int itemsPerRow = Math.min(4, maxCols);
 
         int totalItems = trackedPotions.size();
         int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
         int slotsToDraw = Math.min(totalItems, itemsPerRow);
         int textureWidth = (slotsToDraw * 20) + 1;
         int renderedWidth = textureWidth + 1;
+        int hudHeight = totalRows > 1 ? totalRows * 20 + 2 : 22;
+
+        HudLayoutManager.register("potion", anchor, renderedWidth, hudHeight, getVerticalOffset());
+        int xOff = HudLayoutManager.getX("potion");
+        int yOff = HudLayoutManager.getY("potion");
 
         int startX;
-        if (forceLeft) {
-            startX = 10;
-        } else if (forceRight) {
-            startX = screenWidth - 10 - renderedWidth;
-        } else { // Auto
-            if (isRightHanded) {
-                startX = middleX + 91 + 7;
-            } else {
-                startX = (middleX - 91 - 7) - renderedWidth;
-            }
+        switch (anchor) {
+            case HOTBAR_LEFT:
+                startX = hotbarLeftEdge - xOff - renderedWidth;
+                break;
+            case HOTBAR_RIGHT:
+                startX = hotbarRightEdge + xOff;
+                break;
+            case SCREEN_LEFT:
+                startX = 10 + xOff;
+                break;
+            case SCREEN_RIGHT:
+                startX = screenWidth - 10 - xOff - renderedWidth;
+                break;
+            default:
+                startX = 10;
         }
         startX = Math.max(2, Math.min(startX, screenWidth - renderedWidth - 2));
+
+        int baseYPos = yBase - yOff;
 
         int currentY = baseYPos + 22;
         for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {

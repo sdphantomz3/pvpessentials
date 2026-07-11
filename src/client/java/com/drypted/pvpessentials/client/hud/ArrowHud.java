@@ -13,6 +13,11 @@ import net.minecraft.world.item.ProjectileWeaponItem;
 
 public class ArrowHud {
 
+    private static long lastGameTime = -1;
+    private static ItemStack cachedProjectile = ItemStack.EMPTY;
+    private static int cachedAmmoCount = 0;
+    private static boolean cachedIsCreative = false;
+
     private boolean isEnabled() {
         var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARROW_ENABLED);
         return opt != null && Boolean.parseBoolean(opt.value);
@@ -54,17 +59,22 @@ public class ArrowHud {
 
         if (weaponStack.isEmpty()) return;
 
-        ItemStack projectileStack = player.getProjectile(weaponStack);
-        if (projectileStack.isEmpty()) {
-            projectileStack = new ItemStack(Items.ARROW);
-        }
+        long gameTime = minecraft.level != null ? minecraft.level.getGameTime() : -1;
+        if (gameTime != lastGameTime) {
+            lastGameTime = gameTime;
+            cachedProjectile = player.getProjectile(weaponStack);
+            if (cachedProjectile.isEmpty()) {
+                cachedProjectile = new ItemStack(Items.ARROW);
+            }
+            cachedIsCreative = player.isCreative();
 
-        int totalAmmoCount = 0;
-        int containerSize = player.getInventory().getContainerSize();
-        for (int i = 0; i < containerSize; i++) {
-            ItemStack slotStack = player.getInventory().getItem(i);
-            if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, projectileStack)) {
-                totalAmmoCount += slotStack.getCount();
+            cachedAmmoCount = 0;
+            int containerSize = player.getInventory().getContainerSize();
+            for (int i = 0; i < containerSize; i++) {
+                ItemStack slotStack = player.getInventory().getItem(i);
+                if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, cachedProjectile)) {
+                    cachedAmmoCount += slotStack.getCount();
+                }
             }
         }
 
@@ -76,9 +86,9 @@ public class ArrowHud {
         int renderX = centerX + getHorizontalOffset();
         int renderY = centerY - 8 + getVerticalOffset();
 
-        graphics.item(projectileStack, renderX, renderY);
+        graphics.item(cachedProjectile, renderX, renderY);
 
-        String countText = player.isCreative() ? "∞" : String.valueOf(totalAmmoCount);
+        String countText = cachedIsCreative ? "\u221E" : String.valueOf(cachedAmmoCount);
         int textX = renderX + 18;
         int textY = centerY - 4 + getVerticalOffset();
         RenderUtil.drawScaledText(graphics, countText, 1.0f, textX, textY, 0xFFFFFF, 1.0f, true);

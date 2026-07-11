@@ -63,7 +63,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Armor HUD", "Start with Head",
                                 KEY_ARMOR_START_WITH_HEAD, "toggle", "false", null, null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Armor HUD", "Side",
-                                KEY_ARMOR_SIDE, "cycle", "Auto", List.of("Auto", "Left", "Right"), null);
+                                KEY_ARMOR_SIDE, "cycle", "HOTBAR", List.of("HOTBAR", "Left", "Right"), null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Armor HUD", "Vertical Offset",
                                 KEY_ARMOR_VERTICAL_OFFSET, "number", "0", null, null);
 
@@ -71,7 +71,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion HUD", "Enabled",
                                 KEY_POTION_ENABLED, "toggle", "true", null, null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion HUD", "Side",
-                                KEY_POTION_SIDE, "cycle", "Auto", List.of("Auto", "Left", "Right"), null);
+                                KEY_POTION_SIDE, "cycle", "HOTBAR", List.of("HOTBAR", "Left", "Right"), null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion HUD", "Vertical Offset",
                                 KEY_POTION_VERTICAL_OFFSET, "number", "0", null, null);
 
@@ -79,7 +79,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Enabled",
                                 KEY_MISC_ENABLED, "toggle", "true", null, null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Side",
-                                KEY_MISC_SIDE, "cycle", "Auto", List.of("Auto", "Left", "Right"), null);
+                                KEY_MISC_SIDE, "cycle", "HOTBAR", List.of("HOTBAR", "Left", "Right"), null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Vertical Offset",
                                 KEY_MISC_VERTICAL_OFFSET, "number", "0", null, null);
 
@@ -136,13 +136,13 @@ public class PVPEssentialsClient implements ClientModInitializer {
 
                 HudElementRegistry.attachElementBefore(
                                 VanillaHudElements.HOTBAR,
-                                Identifier.fromNamespaceAndPath(MOD_ID, "misc_hud"),
-                                this.miscHud::render);
+                                Identifier.fromNamespaceAndPath(MOD_ID, "potion_hud"),
+                                this.potionHud::render);
 
                 HudElementRegistry.attachElementBefore(
                                 VanillaHudElements.HOTBAR,
-                                Identifier.fromNamespaceAndPath(MOD_ID, "potion_hud"),
-                                this.potionHud::render);
+                                Identifier.fromNamespaceAndPath(MOD_ID, "misc_hud"),
+                                this.miscHud::render);
 
                 HudElementRegistry.attachElementBefore(
                                 VanillaHudElements.CROSSHAIR,
