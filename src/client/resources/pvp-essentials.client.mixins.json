@@ -3,7 +3,8 @@
 	"package": "com.drypted.pvpessentials.client.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"client": [
-		"NoPotionParticlesMixin"
+		"NoPotionParticlesMixin",
+		"ShieldMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

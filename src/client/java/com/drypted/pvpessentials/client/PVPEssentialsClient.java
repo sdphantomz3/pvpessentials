@@ -32,6 +32,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
         public static final String KEY_MISC_ENABLED = "pvpessentials.mischud.enabled";
         public static final String KEY_MISC_SIDE = "pvpessentials.mischud.side";
         public static final String KEY_MISC_VERTICAL_OFFSET = "pvpessentials.mischud.verticaloffset";
+        public static final String KEY_MISC_ITEMS = "pvpessentials.mischud.items";
 
         public static final String KEY_ARROW_ENABLED = "pvpessentials.arrowhud.enabled";
         public static final String KEY_ARROW_HORIZONTAL_OFFSET = "pvpessentials.arrowhud.horizontaloffset";
@@ -45,8 +46,15 @@ public class PVPEssentialsClient implements ClientModInitializer {
         public static final String KEY_LOWFIRE_ENABLED = "pvpessentials.lowfire.enabled";
         public static final String KEY_LOWFIRE_YOFFSET = "pvpessentials.lowfire.yoffset";
 
-        public static final String KEY_SHIELD_LOW = "pvpessentials.shield.low";
-        public static final String KEY_SHIELD_SIDE = "pvpessentials.shield.side";
+        public static final String KEY_SHIELD_ENABLED = "pvpessentials.shield.enabled";
+        public static final String KEY_SHIELD_IDLE_ROTATION = "pvpessentials.shield.idle.rotation";
+        public static final String KEY_SHIELD_IDLE_ROTATION_DEGREES = "pvpessentials.shield.idle.rotationdegrees";
+        public static final String KEY_SHIELD_IDLE_X = "pvpessentials.shield.idle.x";
+        public static final String KEY_SHIELD_IDLE_Y = "pvpessentials.shield.idle.y";
+        public static final String KEY_SHIELD_IDLE_Z = "pvpessentials.shield.idle.z";
+        public static final String KEY_SHIELD_BLOCKING_X = "pvpessentials.shield.blocking.x";
+        public static final String KEY_SHIELD_BLOCKING_Y = "pvpessentials.shield.blocking.y";
+        public static final String KEY_SHIELD_BLOCKING_Z = "pvpessentials.shield.blocking.z";
 
         public static final String KEY_POTION_PARTICLES_ENABLED = "pvpessentials.potionparticles.enabled";
 
@@ -82,6 +90,11 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 KEY_MISC_SIDE, "cycle", "HOTBAR", List.of("HOTBAR", "Left", "Right"), null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Vertical Offset",
                                 KEY_MISC_VERTICAL_OFFSET, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Tracked Items",
+                                KEY_MISC_ITEMS, "item_select_multi",
+                                "minecraft:golden_apple,minecraft:ender_pearl,minecraft:cobweb,minecraft:enchanted_golden_apple,minecraft:experience_bottle",
+                                null,
+                                "Select items to count and display in the Misc HUD. Add as many as you like.");
 
                 // ---- Arrow HUD ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Arrow HUD", "Enabled",
@@ -112,13 +125,34 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 // YOffset",
                 // KEY_LOWFIRE_YOFFSET, "number", "0.3", null, null);
 
-                // // ---- Shield ----
-                // ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Low
-                // Shield",
-                // KEY_SHIELD_LOW, "toggle", "true", null, null);
-                // ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Side
-                // Shield",
-                // KEY_SHIELD_SIDE, "toggle", "false", null, null);
+                // ---- Shield ----
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Enabled",
+                                KEY_SHIELD_ENABLED, "toggle", "true", null,
+                                "Master switch for the shield rendering modifications.");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Rotation",
+                                KEY_SHIELD_IDLE_ROTATION, "toggle", "true", null,
+                                "Rotate the shield sideways when not blocking.");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Rotation Angle",
+                                KEY_SHIELD_IDLE_ROTATION_DEGREES, "number", "90", null,
+                                "Degrees to rotate the shield when idle (default 90).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle X Offset",
+                                KEY_SHIELD_IDLE_X, "number", "0.1", null,
+                                "Left/Right shift of the shield when idle.");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Y Offset",
+                                KEY_SHIELD_IDLE_Y, "number", "-0.15", null,
+                                "Vertical shift of the shield when idle (negative = lower).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Z Offset",
+                                KEY_SHIELD_IDLE_Z, "number", "-0.2", null,
+                                "Depth shift of the shield when idle (negative = away from camera).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking X Offset",
+                                KEY_SHIELD_BLOCKING_X, "number", "0", null,
+                                "Left/Right shift of the shield while blocking.");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking Y Offset",
+                                KEY_SHIELD_BLOCKING_Y, "number", "-0.1", null,
+                                "Vertical shift of the shield while blocking (negative = lower).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking Z Offset",
+                                KEY_SHIELD_BLOCKING_Z, "number", "0", null,
+                                "Depth shift of the shield while blocking.");
 
                 ConfigManager.load();
         }

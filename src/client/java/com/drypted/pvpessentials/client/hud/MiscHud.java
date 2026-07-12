@@ -9,18 +9,25 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class MiscHud {
 
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
+    private static final int SLOT_PX = 20;
+
+    // Cached resolved item list — recalculated when config changes
+    private static List<Item> cachedTrackedItems = null;
+    private static String lastConfigValue = null;
 
     private boolean isEnabled() {
         var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_MISC_ENABLED);
@@ -40,6 +47,45 @@ public class MiscHud {
         return 0;
     }
 
+    /**
+     * Reads the item_select_multi config and resolves item IDs to actual Item objects.
+     * Results are cached until the config value changes.
+     */
+    private List<Item> getTrackedItems() {
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_MISC_ITEMS);
+        String raw = opt != null ? opt.value : "";
+        if (raw == null) raw = "";
+
+        if (cachedTrackedItems != null && raw.equals(lastConfigValue)) {
+            return cachedTrackedItems;
+        }
+
+        lastConfigValue = raw;
+        // Use LinkedHashSet to preserve order and deduplicate
+        Set<Item> itemSet = new LinkedHashSet<>();
+        if (!raw.isEmpty()) {
+            for (String id : raw.split(",")) {
+                id = id.trim();
+                if (id.isEmpty()) continue;
+                try {
+                    String[] parts = id.split(":");
+                    if (parts.length == 2) {
+                        Identifier identifier = Identifier.fromNamespaceAndPath(parts[0], parts[1]);
+                        Item item = BuiltInRegistries.ITEM.getValue(identifier);
+                        if (item != null) {
+                            itemSet.add(item);
+                        }
+                    }
+                } catch (Exception ignored) {
+                    // Skip malformed item IDs
+                }
+            }
+        }
+
+        cachedTrackedItems = new ArrayList<>(itemSet);
+        return cachedTrackedItems;
+    }
+
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         if (!isEnabled()) return;
 
@@ -48,16 +94,12 @@ public class MiscHud {
 
         if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) return;
 
-        Item[] targetItems = {
-                Items.GOLDEN_APPLE,
-                Items.ENDER_PEARL,
-                Items.COBWEB,
-                Items.ENCHANTED_GOLDEN_APPLE,
-                Items.EXPERIENCE_BOTTLE
-        };
+        List<Item> targetItems = getTrackedItems();
+        if (targetItems.isEmpty()) return;
 
         List<ItemStack> itemsToRender = new ArrayList<>();
         int containerSize = player.getInventory().getContainerSize();
+
         for (Item targetItem : targetItems) {
             int totalCount = 0;
             for (int i = 0; i < containerSize; i++) {
@@ -94,16 +136,22 @@ public class MiscHud {
             anchor = isRightHanded ? Anchor.HOTBAR_RIGHT : Anchor.HOTBAR_LEFT;
         }
 
-        // Dynamic column count - based on zone width (deterministic!)
-        int maxCols = HudLayoutManager.getMaxColumns(anchor, 20);
-        int itemsPerRow = Math.min(2, maxCols);
-
+        // Dynamic column count — fit as many as the zone allows
+        int maxCols = HudLayoutManager.getMaxColumns(anchor, SLOT_PX);
         int totalItems = itemsToRender.size();
+
+        // Limit to a reasonable max and wrap to multiple rows
+        int itemsPerRow = Math.min(totalItems, maxCols);
         int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
-        int slotsToDraw = Math.min(totalItems, itemsPerRow);
-        int textureWidth = (slotsToDraw * 20) + 1;
-        int renderedWidth = textureWidth + 1;
-        int hudHeight = totalRows > 1 ? totalRows * 20 + 2 : 22;
+
+        int slotsOnBottomRow = totalItems - (totalRows - 1) * itemsPerRow;
+        if (slotsOnBottomRow <= 0) slotsOnBottomRow = itemsPerRow;
+
+        // HUD dimensions — bottom row may be narrower
+        int bottomTextureWidth = (slotsOnBottomRow * SLOT_PX) + 1;
+        int fullTextureWidth = (itemsPerRow * SLOT_PX) + 1;
+        int renderedWidth = fullTextureWidth + 1;
+        int hudHeight = totalRows > 1 ? totalRows * SLOT_PX + 2 : 22;
 
         HudLayoutManager.register("misc", anchor, renderedWidth, hudHeight, getVerticalOffset());
         int xOff = HudLayoutManager.getX("misc");
@@ -130,21 +178,42 @@ public class MiscHud {
 
         int baseYPos = yBase - yOff;
 
+        // Draw the hotbar-style background for each row
         int currentY = baseYPos + 22;
         for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
-            int srcV = (totalRows == 1) ? 0 : (rowIndex == 0 ? 1 : (rowIndex == totalRows - 1 ? 0 : 1));
-            int srcHeight = (totalRows == 1) ? 22 : (rowIndex == 0 || rowIndex == totalRows - 1 ? 21 : 20);
+            boolean isTopRow = (rowIndex == 0);
+            boolean isBottomRow = (rowIndex == totalRows - 1);
+            int slotsInThisRow = isBottomRow ? slotsOnBottomRow : itemsPerRow;
+
+            int srcV;
+            int srcHeight;
+            if (totalRows == 1) {
+                srcV = 0;
+                srcHeight = 22;
+            } else if (isTopRow) {
+                srcV = 1;
+                srcHeight = 21;
+            } else if (isBottomRow) {
+                srcV = 0;
+                srcHeight = 21;
+            } else {
+                srcV = 1;
+                srcHeight = 20;
+            }
+
+            int rowTextureWidth = (slotsInThisRow * SLOT_PX) + 1;
             currentY -= srcHeight;
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, currentY, 0, srcV, textureWidth, srcHeight, 182, 22);
-            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + textureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, currentY, 0, srcV, rowTextureWidth, srcHeight, 182, 22);
+            graphics.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + rowTextureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
         }
 
+        // Render items into their slots
         for (int i = 0; i < totalItems; i++) {
             ItemStack stack = itemsToRender.get(i);
             int rowIndex = i / itemsPerRow;
             int slotOffset = i % itemsPerRow;
-            int itemX = startX + 3 + (slotOffset * 20);
-            int itemY = (baseYPos + 3) - (rowIndex * 20);
+            int itemX = startX + 3 + (slotOffset * SLOT_PX);
+            int itemY = (baseYPos + 3) - (rowIndex * SLOT_PX);
             RenderUtil.drawScaledItemFactor(graphics, stack, itemX, itemY, 1.0f);
         }
     }
