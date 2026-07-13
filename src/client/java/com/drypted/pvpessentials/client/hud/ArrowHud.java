@@ -18,79 +18,110 @@ public class ArrowHud {
     private static int cachedAmmoCount = 0;
     private static boolean cachedIsCreative = false;
 
+    // Preview mode for HUD editor
+    public static boolean previewMode = false;
+    public static int previewX = 0;
+    public static int previewY = 0;
+
     private boolean isEnabled() {
         var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARROW_ENABLED);
         return opt != null && Boolean.parseBoolean(opt.value);
     }
 
-    private int getHorizontalOffset() {
-        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARROW_HORIZONTAL_OFFSET);
-        if (opt != null) {
+    private int getPosX(int screenWidth) {
+        if (previewMode) return previewX;
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_ARROW_X);
+        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
             try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
         }
-        return 12;
+        // Default: right of crosshair
+        return screenWidth / 2 + 12;
     }
 
-    private int getVerticalOffset() {
-        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_ARROW_VERTICAL_OFFSET);
-        if (opt != null) {
+    private int getPosY(int screenHeight) {
+        if (previewMode) return previewY;
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_ARROW_Y);
+        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
             try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
         }
-        return 0;
+        // Default: near crosshair center
+        return screenHeight / 2 - 8;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
         if (!isEnabled()) return;
+        if (previewMode) return;
 
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
 
         if (player == null || player.isSpectator() || minecraft.gui.hud.isHidden()) return;
 
-        ItemStack mainHand = player.getMainHandItem();
-        ItemStack offHand = player.getOffhandItem();
-        ItemStack weaponStack = ItemStack.EMPTY;
-
-        if (mainHand.getItem() instanceof ProjectileWeaponItem) {
-            weaponStack = mainHand;
-        } else if (offHand.getItem() instanceof ProjectileWeaponItem) {
-            weaponStack = offHand;
-        }
-
+        ItemStack weaponStack = getWeaponStack(player);
         if (weaponStack.isEmpty()) return;
 
-        long gameTime = minecraft.level != null ? minecraft.level.getGameTime() : -1;
-        if (gameTime != lastGameTime) {
-            lastGameTime = gameTime;
-            cachedProjectile = player.getProjectile(weaponStack);
-            if (cachedProjectile.isEmpty()) {
-                cachedProjectile = new ItemStack(Items.ARROW);
-            }
-            cachedIsCreative = player.isCreative();
-
-            cachedAmmoCount = 0;
-            int containerSize = player.getInventory().getContainerSize();
-            for (int i = 0; i < containerSize; i++) {
-                ItemStack slotStack = player.getInventory().getItem(i);
-                if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, cachedProjectile)) {
-                    cachedAmmoCount += slotStack.getCount();
-                }
-            }
-        }
+        updateCache(minecraft, player, weaponStack);
 
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int screenHeight = minecraft.getWindow().getGuiScaledHeight();
-        int centerX = screenWidth / 2;
-        int centerY = screenHeight / 2;
+        int renderX = getPosX(screenWidth);
+        int renderY = getPosY(screenHeight);
 
-        int renderX = centerX + getHorizontalOffset();
-        int renderY = centerY - 8 + getVerticalOffset();
+        renderArrow(graphics, renderX, renderY);
+    }
 
-        graphics.item(cachedProjectile, renderX, renderY);
+    /**
+     * Called by HudEditorScreen to render a preview at the given position.
+     */
+    public static void renderPreview(GuiGraphicsExtractor graphics, Minecraft mc, int x, int y) {
+        Player player = mc.player;
+        if (player == null) return;
 
+        ItemStack weaponStack = getWeaponStack(player);
+        if (weaponStack.isEmpty()) return;
+
+        updateCache(mc, player, weaponStack);
+        renderArrow(graphics, x, y);
+    }
+
+    private static ItemStack getWeaponStack(Player player) {
+        ItemStack mainHand = player.getMainHandItem();
+        ItemStack offHand = player.getOffhandItem();
+
+        if (mainHand.getItem() instanceof ProjectileWeaponItem) {
+            return mainHand;
+        } else if (offHand.getItem() instanceof ProjectileWeaponItem) {
+            return offHand;
+        }
+        return ItemStack.EMPTY;
+    }
+
+    private static void updateCache(Minecraft minecraft, Player player, ItemStack weaponStack) {
+        long gameTime = minecraft.level != null ? minecraft.level.getGameTime() : -1;
+        if (gameTime == lastGameTime) return;
+
+        lastGameTime = gameTime;
+        cachedProjectile = player.getProjectile(weaponStack);
+        if (cachedProjectile.isEmpty()) {
+            cachedProjectile = new ItemStack(Items.ARROW);
+        }
+        cachedIsCreative = player.isCreative();
+
+        cachedAmmoCount = 0;
+        int containerSize = player.getInventory().getContainerSize();
+        for (int i = 0; i < containerSize; i++) {
+            ItemStack slotStack = player.getInventory().getItem(i);
+            if (!slotStack.isEmpty() && ItemStack.isSameItemSameComponents(slotStack, cachedProjectile)) {
+                cachedAmmoCount += slotStack.getCount();
+            }
+        }
+    }
+
+    private static void renderArrow(GuiGraphicsExtractor g, int renderX, int renderY) {
+        g.item(cachedProjectile, renderX, renderY);
         String countText = cachedIsCreative ? "\u221E" : String.valueOf(cachedAmmoCount);
         int textX = renderX + 18;
-        int textY = centerY - 4 + getVerticalOffset();
-        RenderUtil.drawScaledText(graphics, countText, 1.0f, textX, textY, 0xFFFFFF, 1.0f, true);
+        int textY = renderY + 4;
+        RenderUtil.drawScaledText(g, countText, 1.0f, textX, textY, 0xFFFFFF, 1.0f, true);
     }
 }

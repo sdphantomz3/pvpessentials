@@ -7,9 +7,11 @@ import com.drypted.pvpessentials.client.hud.DamageIndicatorHud;
 import com.drypted.pvpessentials.client.hud.PotionHud;
 import com.drypted.pvpessentials.client.hud.ArrowHud;
 import com.drypted.pvpessentials.client.hud.MiscHud;
+import com.drypted.pvpessentials.client.screen.HudEditorScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
@@ -22,26 +24,30 @@ public class PVPEssentialsClient implements ClientModInitializer {
         // Unique keys for all config options – used both for registration and lookup
         public static final String KEY_ARMOR_ENABLED = "pvpessentials.armorhud.enabled";
         public static final String KEY_ARMOR_START_WITH_HEAD = "pvpessentials.armorhud.startwithhead";
-        public static final String KEY_ARMOR_SIDE = "pvpessentials.armorhud.side";
-        public static final String KEY_ARMOR_VERTICAL_OFFSET = "pvpessentials.armorhud.verticaloffset";
 
         public static final String KEY_POTION_ENABLED = "pvpessentials.potionhud.enabled";
-        public static final String KEY_POTION_SIDE = "pvpessentials.potionhud.side";
-        public static final String KEY_POTION_VERTICAL_OFFSET = "pvpessentials.potionhud.verticaloffset";
 
         public static final String KEY_MISC_ENABLED = "pvpessentials.mischud.enabled";
-        public static final String KEY_MISC_SIDE = "pvpessentials.mischud.side";
-        public static final String KEY_MISC_VERTICAL_OFFSET = "pvpessentials.mischud.verticaloffset";
         public static final String KEY_MISC_ITEMS = "pvpessentials.mischud.items";
 
         public static final String KEY_ARROW_ENABLED = "pvpessentials.arrowhud.enabled";
-        public static final String KEY_ARROW_HORIZONTAL_OFFSET = "pvpessentials.arrowhud.horizontaloffset";
-        public static final String KEY_ARROW_VERTICAL_OFFSET = "pvpessentials.arrowhud.verticaloffset";
 
         public static final String KEY_DAMAGE_ENABLED = "pvpessentials.damageindicator.enabled";
         public static final String KEY_DAMAGE_DISPLAY_MODE = "pvpessentials.damageindicator.displaymode";
         public static final String KEY_DAMAGE_SCALE = "pvpessentials.damageindicator.scale";
         public static final String KEY_DAMAGE_LIFETIME = "pvpessentials.damageindicator.lifetime";
+
+        // HUD layout position keys (X and Y in GUI-scaled pixel coordinates)
+        public static final String KEY_HUD_ARMOR_X = "pvpessentials.hudlayout.armor_x";
+        public static final String KEY_HUD_ARMOR_Y = "pvpessentials.hudlayout.armor_y";
+        public static final String KEY_HUD_POTION_X = "pvpessentials.hudlayout.potion_x";
+        public static final String KEY_HUD_POTION_Y = "pvpessentials.hudlayout.potion_y";
+        public static final String KEY_HUD_MISC_X = "pvpessentials.hudlayout.misc_x";
+        public static final String KEY_HUD_MISC_Y = "pvpessentials.hudlayout.misc_y";
+        public static final String KEY_HUD_ARROW_X = "pvpessentials.hudlayout.arrow_x";
+        public static final String KEY_HUD_ARROW_Y = "pvpessentials.hudlayout.arrow_y";
+        public static final String KEY_HUD_DAMAGE_X = "pvpessentials.hudlayout.damage_x";
+        public static final String KEY_HUD_DAMAGE_Y = "pvpessentials.hudlayout.damage_y";
 
         public static final String KEY_LOWFIRE_ENABLED = "pvpessentials.lowfire.enabled";
         public static final String KEY_LOWFIRE_YOFFSET = "pvpessentials.lowfire.yoffset";
@@ -70,26 +76,14 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 KEY_ARMOR_ENABLED, "toggle", "true", null, null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Armor HUD", "Start with Head",
                                 KEY_ARMOR_START_WITH_HEAD, "toggle", "false", null, null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Armor HUD", "Side",
-                                KEY_ARMOR_SIDE, "cycle", "HOTBAR", List.of("HOTBAR", "Left", "Right"), null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Armor HUD", "Vertical Offset",
-                                KEY_ARMOR_VERTICAL_OFFSET, "number", "0", null, null);
 
                 // ---- Potion HUD ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion HUD", "Enabled",
                                 KEY_POTION_ENABLED, "toggle", "true", null, null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion HUD", "Side",
-                                KEY_POTION_SIDE, "cycle", "HOTBAR", List.of("HOTBAR", "Left", "Right"), null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion HUD", "Vertical Offset",
-                                KEY_POTION_VERTICAL_OFFSET, "number", "0", null, null);
 
                 // ---- Misc HUD ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Enabled",
                                 KEY_MISC_ENABLED, "toggle", "true", null, null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Side",
-                                KEY_MISC_SIDE, "cycle", "HOTBAR", List.of("HOTBAR", "Left", "Right"), null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Vertical Offset",
-                                KEY_MISC_VERTICAL_OFFSET, "number", "0", null, null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Tracked Items",
                                 KEY_MISC_ITEMS, "item_select_multi",
                                 "minecraft:golden_apple,minecraft:ender_pearl,minecraft:cobweb,minecraft:enchanted_golden_apple,minecraft:experience_bottle",
@@ -99,10 +93,6 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 // ---- Arrow HUD ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Arrow HUD", "Enabled",
                                 KEY_ARROW_ENABLED, "toggle", "true", null, null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Arrow HUD", "Horizontal Offset",
-                                KEY_ARROW_HORIZONTAL_OFFSET, "number", "12", null, null);
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Arrow HUD", "Vertical Offset",
-                                KEY_ARROW_VERTICAL_OFFSET, "number", "0", null, null);
 
                 // ---- Damage Indicator ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Damage Indicator", "Enabled",
@@ -113,6 +103,36 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 KEY_DAMAGE_SCALE, "number", "1.2", null, null);
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Damage Indicator", "Lifetime (ticks)",
                                 KEY_DAMAGE_LIFETIME, "number", "22", null, null);
+
+                // ---- HUD Layout Positions ----
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor X",
+                                KEY_HUD_ARMOR_X, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor Y",
+                                KEY_HUD_ARMOR_Y, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion X",
+                                KEY_HUD_POTION_X, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion Y",
+                                KEY_HUD_POTION_Y, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc X",
+                                KEY_HUD_MISC_X, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc Y",
+                                KEY_HUD_MISC_Y, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow X",
+                                KEY_HUD_ARROW_X, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow Y",
+                                KEY_HUD_ARROW_Y, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage X",
+                                KEY_HUD_DAMAGE_X, "number", "0", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage Y",
+                                KEY_HUD_DAMAGE_Y, "number", "0", null, null);
+
+                // ---- HUD Layout Editor Action ----
+                ConfigManager.registerAction(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Edit HUD Layout",
+                                "pvpessentials.hudlayout.edit", "Open Editor",
+                                () -> {
+                                        Minecraft.getInstance().gui.setScreen(new HudEditorScreen());
+                                },
+                                "Opens a drag-and-drop editor to position all HUD elements on screen.");
 
                 // ---- No Potion Particles ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion Particles", "Enabled",
