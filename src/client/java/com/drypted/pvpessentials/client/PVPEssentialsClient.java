@@ -37,17 +37,22 @@ public class PVPEssentialsClient implements ClientModInitializer {
         public static final String KEY_DAMAGE_SCALE = "pvpessentials.damageindicator.scale";
         public static final String KEY_DAMAGE_LIFETIME = "pvpessentials.damageindicator.lifetime";
 
-        // HUD layout position keys (X and Y in GUI-scaled pixel coordinates)
+        // HUD layout position keys (X and Y as normalized percentages 0.0–1.0)
         public static final String KEY_HUD_ARMOR_X = "pvpessentials.hudlayout.armor_x";
         public static final String KEY_HUD_ARMOR_Y = "pvpessentials.hudlayout.armor_y";
+        public static final String KEY_HUD_ARMOR_ANCHOR = "pvpessentials.hudlayout.armor_anchor";
         public static final String KEY_HUD_POTION_X = "pvpessentials.hudlayout.potion_x";
         public static final String KEY_HUD_POTION_Y = "pvpessentials.hudlayout.potion_y";
+        public static final String KEY_HUD_POTION_ANCHOR = "pvpessentials.hudlayout.potion_anchor";
         public static final String KEY_HUD_MISC_X = "pvpessentials.hudlayout.misc_x";
         public static final String KEY_HUD_MISC_Y = "pvpessentials.hudlayout.misc_y";
+        public static final String KEY_HUD_MISC_ANCHOR = "pvpessentials.hudlayout.misc_anchor";
         public static final String KEY_HUD_ARROW_X = "pvpessentials.hudlayout.arrow_x";
         public static final String KEY_HUD_ARROW_Y = "pvpessentials.hudlayout.arrow_y";
+        public static final String KEY_HUD_ARROW_ANCHOR = "pvpessentials.hudlayout.arrow_anchor";
         public static final String KEY_HUD_DAMAGE_X = "pvpessentials.hudlayout.damage_x";
         public static final String KEY_HUD_DAMAGE_Y = "pvpessentials.hudlayout.damage_y";
+        public static final String KEY_HUD_DAMAGE_ANCHOR = "pvpessentials.hudlayout.damage_anchor";
 
         public static final String KEY_LOWFIRE_ENABLED = "pvpessentials.lowfire.enabled";
         public static final String KEY_LOWFIRE_YOFFSET = "pvpessentials.lowfire.yoffset";
@@ -104,27 +109,61 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Damage Indicator", "Lifetime (ticks)",
                                 KEY_DAMAGE_LIFETIME, "number", "22", null, null);
 
-                // ---- HUD Layout Positions ----
+                // ---- HUD Layout Positions (normalized percentages, 0.0–1.0) ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor X",
-                                KEY_HUD_ARMOR_X, "number", "0", null, null);
+                                KEY_HUD_ARMOR_X, "number", "0", null,
+                                "Normalized X position (0.0=left, 1.0=right). Use Edit HUD Layout for drag-and-drop.");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor Y",
-                                KEY_HUD_ARMOR_Y, "number", "0", null, null);
+                                KEY_HUD_ARMOR_Y, "number", "0", null,
+                                "Normalized Y position (0.0=top, 1.0=bottom). Use Edit HUD Layout for drag-and-drop.");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor Anchor",
+                                KEY_HUD_ARMOR_ANCHOR, "cycle", "BOTTOM_LEFT",
+                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
+                                "Which corner of the Armor HUD the position refers to.");
+
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion X",
-                                KEY_HUD_POTION_X, "number", "0", null, null);
+                                KEY_HUD_POTION_X, "number", "0", null,
+                                "Normalized X position (0.0=left, 1.0=right).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion Y",
-                                KEY_HUD_POTION_Y, "number", "0", null, null);
+                                KEY_HUD_POTION_Y, "number", "0", null,
+                                "Normalized Y position (0.0=top, 1.0=bottom).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion Anchor",
+                                KEY_HUD_POTION_ANCHOR, "cycle", "BOTTOM_RIGHT",
+                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
+                                "Which corner of the Potion HUD the position refers to.");
+
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc X",
-                                KEY_HUD_MISC_X, "number", "0", null, null);
+                                KEY_HUD_MISC_X, "number", "0", null,
+                                "Normalized X position (0.0=left, 1.0=right).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc Y",
-                                KEY_HUD_MISC_Y, "number", "0", null, null);
+                                KEY_HUD_MISC_Y, "number", "0", null,
+                                "Normalized Y position (0.0=top, 1.0=bottom).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc Anchor",
+                                KEY_HUD_MISC_ANCHOR, "cycle", "BOTTOM_RIGHT",
+                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
+                                "Which corner of the Misc HUD the position refers to.");
+
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow X",
-                                KEY_HUD_ARROW_X, "number", "0", null, null);
+                                KEY_HUD_ARROW_X, "number", "0", null,
+                                "Normalized X position (0.0=left, 1.0=right).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow Y",
-                                KEY_HUD_ARROW_Y, "number", "0", null, null);
+                                KEY_HUD_ARROW_Y, "number", "0", null,
+                                "Normalized Y position (0.0=top, 1.0=bottom).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow Anchor",
+                                KEY_HUD_ARROW_ANCHOR, "cycle", "CENTER",
+                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
+                                "Which corner of the Arrow HUD the position refers to.");
+
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage X",
-                                KEY_HUD_DAMAGE_X, "number", "0", null, null);
+                                KEY_HUD_DAMAGE_X, "number", "0", null,
+                                "Normalized X position (0.0=left, 1.0=right).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage Y",
-                                KEY_HUD_DAMAGE_Y, "number", "0", null, null);
+                                KEY_HUD_DAMAGE_Y, "number", "0", null,
+                                "Normalized Y position (0.0=top, 1.0=bottom).");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage Anchor",
+                                KEY_HUD_DAMAGE_ANCHOR, "cycle", "CENTER",
+                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
+                                "Which corner of the Damage Indicator the position refers to.");
 
                 // ---- HUD Layout Editor Action ----
                 ConfigManager.registerAction(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Edit HUD Layout",

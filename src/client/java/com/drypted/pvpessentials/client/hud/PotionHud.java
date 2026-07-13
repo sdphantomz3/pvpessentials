@@ -19,34 +19,57 @@ public class PotionHud {
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
     private static final int MAX_COLS = 4;
 
+    private static final int ELEM_WIDTH = 82;
+    private static final int ELEM_HEIGHT = 22;
+
     // Preview mode for HUD editor
     public static boolean previewMode = false;
-    public static int previewX = 0;
-    public static int previewY = 0;
+    public static float previewX = 0f;
+    public static float previewY = 0f;
+    public static Anchor previewAnchor = Anchor.TOP_LEFT;
 
     private boolean isEnabled() {
         var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_POTION_ENABLED);
         return opt != null && Boolean.parseBoolean(opt.value);
     }
 
-    private int getPosX(int screenWidth) {
-        if (previewMode) return previewX;
-        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_POTION_X);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+    private int[] getPosition(int screenWidth, int screenHeight) {
+        if (previewMode) {
+            return previewAnchor.toPixel(previewX, previewY, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
         }
-        // Default: right of hotbar
-        return screenWidth / 2 + 91 + 7;
+        float xp = readPercent(PVPEssentialsClient.KEY_HUD_POTION_X, getDefaultXPercent(screenWidth));
+        float yp = readPercent(PVPEssentialsClient.KEY_HUD_POTION_Y, getDefaultYPercent(screenHeight));
+        Anchor anchor = readAnchor(PVPEssentialsClient.KEY_HUD_POTION_ANCHOR, Anchor.BOTTOM_RIGHT);
+        return anchor.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
     }
 
-    private int getPosY(int screenHeight) {
-        if (previewMode) return previewY;
-        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_POTION_Y);
+    public static float getDefaultXPercent(int screenWidth) {
+        return 1f - ((float) (screenWidth / 2 + 91 + 7) / screenWidth);
+    }
+
+    public static float getDefaultYPercent(int screenHeight) {
+        return (float) (screenHeight - ELEM_HEIGHT) / screenHeight;
+    }
+
+    private static float readPercent(String key, float defaultVal) {
+        var opt = ConfigManager.getOption(key);
         if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+            try {
+                float val = Float.parseFloat(opt.value);
+                if (val > 2.0f) return defaultVal;
+                return val;
+            } catch (NumberFormatException ignored) {}
         }
-        // Default: bottom of screen
-        return screenHeight - 22;
+        return defaultVal;
+    }
+
+    private static Anchor readAnchor(String key, Anchor defaultAnchor) {
+        var opt = ConfigManager.getOption(key);
+        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
+            try { return Anchor.valueOf(opt.value.toUpperCase()); }
+            catch (IllegalArgumentException ignored) {}
+        }
+        return defaultAnchor;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
@@ -81,8 +104,9 @@ public class PotionHud {
 
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int screenHeight = minecraft.getWindow().getGuiScaledHeight();
-        int startX = getPosX(screenWidth);
-        int baseYPos = getPosY(screenHeight);
+        int[] pos = getPosition(screenWidth, screenHeight);
+        int startX = pos[0];
+        int baseYPos = pos[1];
 
         renderPotions(graphics, trackedPotions, startX, baseYPos);
     }

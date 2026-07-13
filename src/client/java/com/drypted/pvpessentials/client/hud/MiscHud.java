@@ -23,10 +23,14 @@ public class MiscHud {
     private static final int SLOT_PX = 20;
     private static final int MAX_COLS = 4;
 
+    private static final int ELEM_WIDTH = 82;
+    private static final int ELEM_HEIGHT = 22;
+
     // Preview mode for HUD editor
     public static boolean previewMode = false;
-    public static int previewX = 0;
-    public static int previewY = 0;
+    public static float previewX = 0f;
+    public static float previewY = 0f;
+    public static Anchor previewAnchor = Anchor.TOP_LEFT;
 
     // Cached resolved item list — recalculated when config changes
     private static List<Item> cachedTrackedItems = null;
@@ -37,24 +41,43 @@ public class MiscHud {
         return opt != null && Boolean.parseBoolean(opt.value);
     }
 
-    private int getPosX(int screenWidth) {
-        if (previewMode) return previewX;
-        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_MISC_X);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+    private int[] getPosition(int screenWidth, int screenHeight) {
+        if (previewMode) {
+            return previewAnchor.toPixel(previewX, previewY, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
         }
-        // Default: right of hotbar, above potions
-        return screenWidth / 2 + 91 + 7;
+        float xp = readPercent(PVPEssentialsClient.KEY_HUD_MISC_X, getDefaultXPercent(screenWidth));
+        float yp = readPercent(PVPEssentialsClient.KEY_HUD_MISC_Y, getDefaultYPercent(screenHeight));
+        Anchor anchor = readAnchor(PVPEssentialsClient.KEY_HUD_MISC_ANCHOR, Anchor.BOTTOM_RIGHT);
+        return anchor.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
     }
 
-    private int getPosY(int screenHeight) {
-        if (previewMode) return previewY;
-        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_MISC_Y);
+    public static float getDefaultXPercent(int screenWidth) {
+        return 1f - ((float) (screenWidth / 2 + 91 + 7) / screenWidth);
+    }
+
+    public static float getDefaultYPercent(int screenHeight) {
+        return (float) (screenHeight - 44) / screenHeight;
+    }
+
+    private static float readPercent(String key, float defaultVal) {
+        var opt = ConfigManager.getOption(key);
         if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Integer.parseInt(opt.value); } catch (NumberFormatException ignored) {}
+            try {
+                float val = Float.parseFloat(opt.value);
+                if (val > 2.0f) return defaultVal;
+                return val;
+            } catch (NumberFormatException ignored) {}
         }
-        // Default: above potion HUD
-        return screenHeight - 44;
+        return defaultVal;
+    }
+
+    private static Anchor readAnchor(String key, Anchor defaultAnchor) {
+        var opt = ConfigManager.getOption(key);
+        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
+            try { return Anchor.valueOf(opt.value.toUpperCase()); }
+            catch (IllegalArgumentException ignored) {}
+        }
+        return defaultAnchor;
     }
 
     /**
@@ -130,8 +153,9 @@ public class MiscHud {
 
         int screenWidth = minecraft.getWindow().getGuiScaledWidth();
         int screenHeight = minecraft.getWindow().getGuiScaledHeight();
-        int startX = getPosX(screenWidth);
-        int baseYPos = getPosY(screenHeight);
+        int[] pos = getPosition(screenWidth, screenHeight);
+        int startX = pos[0];
+        int baseYPos = pos[1];
 
         renderMisc(graphics, itemsToRender, startX, baseYPos);
     }

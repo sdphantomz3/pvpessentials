@@ -2,6 +2,7 @@ package com.drypted.pvpessentials.client.screen;
 
 import com.drypted.dlib.client.config.ConfigManager;
 import com.drypted.pvpessentials.client.PVPEssentialsClient;
+import com.drypted.pvpessentials.client.hud.Anchor;
 import com.drypted.pvpessentials.client.hud.ArmorHud;
 import com.drypted.pvpessentials.client.hud.ArrowHud;
 import com.drypted.pvpessentials.client.hud.DamageIndicatorHud;
@@ -34,17 +35,19 @@ public class HudEditorScreen extends Screen {
             new HudElement(HUD_ARMOR, "Armor HUD", 82, 22),
             new HudElement(HUD_POTION, "Potion HUD", 82, 22),
             new HudElement(HUD_MISC, "Misc HUD", 82, 22),
-            new HudElement(HUD_ARROW, "Arrow HUD", 40, 20),
-            new HudElement(HUD_DAMAGE, "Damage Indicator", 80, 30),
+            new HudElement(HUD_ARROW, "Arrow HUD", 30, 18),
+            new HudElement(HUD_DAMAGE, "Damage Indicator", 30, 14),
     };
 
-    // Current positions (in GUI-scaled coordinates) — these are the working copies
-    private final Map<String, Integer> posX = new LinkedHashMap<>();
-    private final Map<String, Integer> posY = new LinkedHashMap<>();
+    // Current positions stored as normalized percentages (0.0–1.0)
+    private final Map<String, Float> posX = new LinkedHashMap<>();
+    private final Map<String, Float> posY = new LinkedHashMap<>();
+    private final Map<String, Anchor> anchors = new LinkedHashMap<>();
 
-    // Original positions at screen open (for Discard)
-    private final Map<String, Integer> originalX = new LinkedHashMap<>();
-    private final Map<String, Integer> originalY = new LinkedHashMap<>();
+    // Original values at screen open (for Discard)
+    private final Map<String, Float> originalX = new LinkedHashMap<>();
+    private final Map<String, Float> originalY = new LinkedHashMap<>();
+    private final Map<String, Anchor> originalAnchors = new LinkedHashMap<>();
 
     // Drag state
     private String draggingHud = null;
@@ -76,6 +79,7 @@ public class HudEditorScreen extends Screen {
         for (String id : posX.keySet()) {
             originalX.put(id, posX.get(id));
             originalY.put(id, posY.get(id));
+            originalAnchors.put(id, anchors.get(id));
         }
 
         // Buttons above the hotbar area
@@ -104,6 +108,8 @@ public class HudEditorScreen extends Screen {
         addRenderableWidget(resetButton);
     }
 
+    // ---------- Rendering ----------
+
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         Minecraft mc = Minecraft.getInstance();
@@ -117,7 +123,7 @@ public class HudEditorScreen extends Screen {
         // Draw selection outlines around each HUD
         drawHudOutlines(graphics);
 
-        // Draw HUD names
+        // Draw HUD names and anchor info
         drawHudLabels(graphics);
 
         // Draw the hotbar reference area (semi-transparent)
@@ -127,64 +133,83 @@ public class HudEditorScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
 
         // Draw instructions
-        graphics.centeredText(mc.font, "Drag HUDs to reposition them. Buttons are above the hotbar.", screenWidth / 2, 10, 0xCCCCCC);
+        graphics.centeredText(mc.font, "Drag to reposition. Right-click HUD to cycle anchor. Buttons are above hotbar.",
+                screenWidth / 2, 10, 0xCCCCCC);
     }
 
     private void setAllPreviewPositions() {
-        ArmorHud.previewX = posX.getOrDefault(HUD_ARMOR, 0);
-        ArmorHud.previewY = posY.getOrDefault(HUD_ARMOR, 0);
-        ArmorHud.previewMode = true;
+        setHudPreview(HUD_ARMOR, ArmorHud.class);
+        setHudPreview(HUD_POTION, PotionHud.class);
+        setHudPreview(HUD_MISC, MiscHud.class);
+        setHudPreview(HUD_ARROW, ArrowHud.class);
+        setHudPreview(HUD_DAMAGE, DamageIndicatorHud.class);
+    }
 
-        PotionHud.previewX = posX.getOrDefault(HUD_POTION, 0);
-        PotionHud.previewY = posY.getOrDefault(HUD_POTION, 0);
-        PotionHud.previewMode = true;
+    private void setHudPreview(String id, Class<?> hudClass) {
+        float xp = posX.getOrDefault(id, 0.5f);
+        float yp = posY.getOrDefault(id, 0.5f);
+        Anchor a = anchors.getOrDefault(id, Anchor.TOP_LEFT);
 
-        MiscHud.previewX = posX.getOrDefault(HUD_MISC, 0);
-        MiscHud.previewY = posY.getOrDefault(HUD_MISC, 0);
-        MiscHud.previewMode = true;
+        if (hudClass == ArmorHud.class) {
+            ArmorHud.previewX = xp; ArmorHud.previewY = yp;
+            ArmorHud.previewAnchor = a; ArmorHud.previewMode = true;
+        } else if (hudClass == PotionHud.class) {
+            PotionHud.previewX = xp; PotionHud.previewY = yp;
+            PotionHud.previewAnchor = a; PotionHud.previewMode = true;
+        } else if (hudClass == MiscHud.class) {
+            MiscHud.previewX = xp; MiscHud.previewY = yp;
+            MiscHud.previewAnchor = a; MiscHud.previewMode = true;
+        } else if (hudClass == ArrowHud.class) {
+            ArrowHud.previewX = xp; ArrowHud.previewY = yp;
+            ArrowHud.previewAnchor = a; ArrowHud.previewMode = true;
+        } else if (hudClass == DamageIndicatorHud.class) {
+            DamageIndicatorHud.previewX = xp; DamageIndicatorHud.previewY = yp;
+            DamageIndicatorHud.previewAnchor = a; DamageIndicatorHud.previewMode = true;
+        }
+    }
 
-        ArrowHud.previewX = posX.getOrDefault(HUD_ARROW, 0);
-        ArrowHud.previewY = posY.getOrDefault(HUD_ARROW, 0);
-        ArrowHud.previewMode = true;
+    /** Compute pixel position for a HUD element from its stored percentage + anchor. */
+    private int[] getPixelPos(String hudId) {
+        HudElement elem = findElement(hudId);
+        if (elem == null) return new int[] {0, 0};
+        float xp = posX.getOrDefault(hudId, 0.5f);
+        float yp = posY.getOrDefault(hudId, 0.5f);
+        Anchor a = anchors.getOrDefault(hudId, Anchor.TOP_LEFT);
+        return a.toPixel(xp, yp, screenWidth, screenHeight, elem.defaultWidth, elem.defaultHeight);
+    }
 
-        DamageIndicatorHud.previewX = posX.getOrDefault(HUD_DAMAGE, 0);
-        DamageIndicatorHud.previewY = posY.getOrDefault(HUD_DAMAGE, 0);
-        DamageIndicatorHud.previewMode = true;
+    /** Convert pixel coordinates back to percentage using the HUD's anchor. */
+    private void setPercentFromPixel(String hudId, int pixelX, int pixelY) {
+        HudElement elem = findElement(hudId);
+        if (elem == null) return;
+        Anchor a = anchors.getOrDefault(hudId, Anchor.TOP_LEFT);
+        float[] pct = a.fromPixel(pixelX, pixelY, screenWidth, screenHeight, elem.defaultWidth, elem.defaultHeight);
+        posX.put(hudId, clampPercent(pct[0]));
+        posY.put(hudId, clampPercent(pct[1]));
+    }
+
+    private static float clampPercent(float val) {
+        return Math.max(0f, Math.min(1f, val));
     }
 
     private void renderHudPreviews(GuiGraphicsExtractor graphics, Minecraft mc) {
-        // Armor HUD preview
-        ArmorHud.renderPreview(graphics, mc,
-                posX.getOrDefault(HUD_ARMOR, 0),
-                posY.getOrDefault(HUD_ARMOR, 0));
-
-        // Potion HUD preview
-        PotionHud.renderPreview(graphics, mc,
-                posX.getOrDefault(HUD_POTION, 0),
-                posY.getOrDefault(HUD_POTION, 0));
-
-        // Misc HUD preview
-        MiscHud.renderPreview(graphics, mc,
-                posX.getOrDefault(HUD_MISC, 0),
-                posY.getOrDefault(HUD_MISC, 0));
-
-        // Arrow HUD preview
-        ArrowHud.renderPreview(graphics, mc,
-                posX.getOrDefault(HUD_ARROW, 0),
-                posY.getOrDefault(HUD_ARROW, 0));
-
-        // Damage Indicator preview
-        DamageIndicatorHud.renderPreview(graphics, mc,
-                posX.getOrDefault(HUD_DAMAGE, 0),
-                posY.getOrDefault(HUD_DAMAGE, 0));
+        for (HudElement elem : HUD_ELEMENTS) {
+            int[] px = getPixelPos(elem.id);
+            switch (elem.id) {
+                case HUD_ARMOR   -> ArmorHud.renderPreview(graphics, mc, px[0], px[1]);
+                case HUD_POTION  -> PotionHud.renderPreview(graphics, mc, px[0], px[1]);
+                case HUD_MISC    -> MiscHud.renderPreview(graphics, mc, px[0], px[1]);
+                case HUD_ARROW   -> ArrowHud.renderPreview(graphics, mc, px[0], px[1]);
+                case HUD_DAMAGE  -> DamageIndicatorHud.renderPreview(graphics, mc, px[0], px[1]);
+            }
+        }
     }
 
     private void drawHudOutlines(GuiGraphicsExtractor graphics) {
         for (HudElement elem : HUD_ELEMENTS) {
-            int x = posX.getOrDefault(elem.id, 0);
-            int y = posY.getOrDefault(elem.id, 0);
-            int w = elem.defaultWidth;
-            int h = elem.defaultHeight;
+            int[] px = getPixelPos(elem.id);
+            int x = px[0], y = px[1];
+            int w = elem.defaultWidth, h = elem.defaultHeight;
 
             boolean isDragging = elem.id.equals(draggingHud);
             int color = isDragging ? 0xFFFFFF00 : 0x88FFFFFF;
@@ -200,13 +225,31 @@ public class HudEditorScreen extends Screen {
     private void drawHudLabels(GuiGraphicsExtractor graphics) {
         Minecraft mc = Minecraft.getInstance();
         for (HudElement elem : HUD_ELEMENTS) {
-            int x = posX.getOrDefault(elem.id, 0);
-            int y = posY.getOrDefault(elem.id, 0);
+            int[] px = getPixelPos(elem.id);
+            int x = px[0], y = px[1];
             int w = elem.defaultWidth;
-            int labelY = y - 10;
-            if (labelY < 4) labelY = y + elem.defaultHeight + 2;
-            graphics.centeredText(mc.font, elem.displayName, x + w / 2, labelY, 0xAAAAAA);
+
+            Anchor a = anchors.getOrDefault(elem.id, Anchor.TOP_LEFT);
+            String labelText = elem.displayName + " [" + formatAnchor(a) + "]";
+
+            int labelY = y - 12;
+            if (labelY < 6) labelY = y + elem.defaultHeight + 4;
+            // Dark backdrop for readability
+            int textWidth = mc.font.width(labelText);
+            graphics.fill(x + w / 2 - textWidth / 2 - 2, labelY - 1,
+                    x + w / 2 + textWidth / 2 + 2, labelY + 9, 0xAA000000);
+            graphics.centeredText(mc.font, labelText, x + w / 2, labelY, 0xFFFFFF);
         }
+    }
+
+    private static String formatAnchor(Anchor a) {
+        return switch (a) {
+            case TOP_LEFT     -> "TL";
+            case TOP_RIGHT    -> "TR";
+            case BOTTOM_LEFT  -> "BL";
+            case BOTTOM_RIGHT -> "BR";
+            case CENTER       -> "C";
+        };
     }
 
     private void drawHotbarReference(GuiGraphicsExtractor graphics) {
@@ -224,19 +267,39 @@ public class HudEditorScreen extends Screen {
         graphics.fill(hotbarRight - 1, hotbarY, hotbarRight, hotbarY + 22, alpha);
 
         // Label
-        graphics.centeredText(Minecraft.getInstance().font, "HOTBAR (fixed, cannot place HUDs here)", centerX, screenHeight - 28, 0x666666);
+        graphics.centeredText(Minecraft.getInstance().font, "HOTBAR (fixed, cannot place HUDs here)",
+                centerX, screenHeight - 28, 0x666666);
     }
 
     // ---------- Mouse handling ----------
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean isDragging) {
-        if (!isDragging && event.button() == 0) {
-            double mouseX = event.x();
-            double mouseY = event.y();
+        if (isDragging) return super.mouseClicked(event, isDragging);
+
+        double mouseX = event.x();
+        double mouseY = event.y();
+
+        // Right-click: cycle anchor of the HUD under the cursor
+        if (event.button() == 1) {
             for (HudElement elem : HUD_ELEMENTS) {
-                int x = posX.getOrDefault(elem.id, 0);
-                int y = posY.getOrDefault(elem.id, 0);
+                int[] px = getPixelPos(elem.id);
+                int x = px[0], y = px[1];
+                if (mouseX >= x && mouseX <= x + elem.defaultWidth &&
+                        mouseY >= y && mouseY <= y + elem.defaultHeight) {
+                    Anchor current = anchors.getOrDefault(elem.id, Anchor.TOP_LEFT);
+                    anchors.put(elem.id, current.next());
+                    return true;
+                }
+            }
+            return super.mouseClicked(event, false);
+        }
+
+        // Left-click: start dragging
+        if (event.button() == 0) {
+            for (HudElement elem : HUD_ELEMENTS) {
+                int[] px = getPixelPos(elem.id);
+                int x = px[0], y = px[1];
                 if (mouseX >= x && mouseX <= x + elem.defaultWidth &&
                         mouseY >= y && mouseY <= y + elem.defaultHeight) {
                     draggingHud = elem.id;
@@ -246,7 +309,7 @@ public class HudEditorScreen extends Screen {
                 }
             }
         }
-        return super.mouseClicked(event, isDragging);
+        return super.mouseClicked(event, false);
     }
 
     @Override
@@ -263,18 +326,18 @@ public class HudEditorScreen extends Screen {
         if (draggingHud != null) {
             double mouseX = event.x();
             double mouseY = event.y();
-            int newX = (int) mouseX - dragOffsetX;
-            int newY = (int) mouseY - dragOffsetY;
+            int newPixelX = (int) mouseX - dragOffsetX;
+            int newPixelY = (int) mouseY - dragOffsetY;
 
             // Clamp to screen bounds
             HudElement elem = findElement(draggingHud);
             if (elem != null) {
-                newX = Math.max(0, Math.min(newX, screenWidth - elem.defaultWidth));
-                newY = Math.max(0, Math.min(newY, screenHeight - elem.defaultHeight));
+                newPixelX = Math.max(0, Math.min(newPixelX, screenWidth - elem.defaultWidth));
+                newPixelY = Math.max(0, Math.min(newPixelY, screenHeight - elem.defaultHeight));
             }
 
-            posX.put(draggingHud, newX);
-            posY.put(draggingHud, newY);
+            // Convert clamped pixel back to percentage using the current anchor
+            setPercentFromPixel(draggingHud, newPixelX, newPixelY);
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
@@ -296,10 +359,13 @@ public class HudEditorScreen extends Screen {
     }
 
     private void discardAndClose() {
-        // Restore original positions to config
+        // Restore original positions and anchors
         for (String id : originalX.keySet()) {
             posX.put(id, originalX.get(id));
             posY.put(id, originalY.get(id));
+        }
+        for (String id : originalAnchors.keySet()) {
+            anchors.put(id, originalAnchors.get(id));
         }
         savePositionsToConfig();
         clearPreviewMode();
@@ -307,96 +373,115 @@ public class HudEditorScreen extends Screen {
     }
 
     private void resetToDefault() {
-        // Reset to calculated default positions
-        int centerX = screenWidth / 2;
-        posX.put(HUD_ARMOR, centerX - 91 - 7 - 82);     // left of hotbar
-        posY.put(HUD_ARMOR, screenHeight - 22);
+        // Reset to calculated default positions (percentages) and default anchors
+        posX.put(HUD_ARMOR, ArmorHud.getDefaultXPercent(screenWidth));
+        posY.put(HUD_ARMOR, ArmorHud.getDefaultYPercent(screenHeight));
+        anchors.put(HUD_ARMOR, Anchor.BOTTOM_LEFT);
 
-        posX.put(HUD_POTION, centerX + 91 + 7);          // right of hotbar
-        posY.put(HUD_POTION, screenHeight - 22);
+        posX.put(HUD_POTION, PotionHud.getDefaultXPercent(screenWidth));
+        posY.put(HUD_POTION, PotionHud.getDefaultYPercent(screenHeight));
+        anchors.put(HUD_POTION, Anchor.BOTTOM_RIGHT);
 
-        posX.put(HUD_MISC, centerX + 91 + 7);            // right of hotbar, above potions
-        posY.put(HUD_MISC, screenHeight - 44);
+        posX.put(HUD_MISC, MiscHud.getDefaultXPercent(screenWidth));
+        posY.put(HUD_MISC, MiscHud.getDefaultYPercent(screenHeight));
+        anchors.put(HUD_MISC, Anchor.BOTTOM_RIGHT);
 
-        posX.put(HUD_ARROW, centerX + 12);                // right of crosshair
-        posY.put(HUD_ARROW, screenHeight / 2 - 8);
+        posX.put(HUD_ARROW, ArrowHud.getDefaultXPercent(screenWidth));
+        posY.put(HUD_ARROW, ArrowHud.getDefaultYPercent(screenHeight));
+        anchors.put(HUD_ARROW, Anchor.CENTER);
 
-        posX.put(HUD_DAMAGE, centerX - 35);               // left of crosshair
-        posY.put(HUD_DAMAGE, screenHeight / 2 - 4);
+        posX.put(HUD_DAMAGE, DamageIndicatorHud.getDefaultXPercent(screenWidth));
+        posY.put(HUD_DAMAGE, DamageIndicatorHud.getDefaultYPercent(screenHeight));
+        anchors.put(HUD_DAMAGE, Anchor.CENTER);
     }
 
     // ---------- Config persistence ----------
 
     private void loadPositionsFromConfig() {
-        loadPosition(HUD_ARMOR, PVPEssentialsClient.KEY_HUD_ARMOR_X, PVPEssentialsClient.KEY_HUD_ARMOR_Y);
-        loadPosition(HUD_POTION, PVPEssentialsClient.KEY_HUD_POTION_X, PVPEssentialsClient.KEY_HUD_POTION_Y);
-        loadPosition(HUD_MISC, PVPEssentialsClient.KEY_HUD_MISC_X, PVPEssentialsClient.KEY_HUD_MISC_Y);
-        loadPosition(HUD_ARROW, PVPEssentialsClient.KEY_HUD_ARROW_X, PVPEssentialsClient.KEY_HUD_ARROW_Y);
-        loadPosition(HUD_DAMAGE, PVPEssentialsClient.KEY_HUD_DAMAGE_X, PVPEssentialsClient.KEY_HUD_DAMAGE_Y);
+        loadPosition(HUD_ARMOR, PVPEssentialsClient.KEY_HUD_ARMOR_X, PVPEssentialsClient.KEY_HUD_ARMOR_Y,
+                PVPEssentialsClient.KEY_HUD_ARMOR_ANCHOR,
+                ArmorHud.getDefaultXPercent(screenWidth), ArmorHud.getDefaultYPercent(screenHeight),
+                Anchor.BOTTOM_LEFT);
+        loadPosition(HUD_POTION, PVPEssentialsClient.KEY_HUD_POTION_X, PVPEssentialsClient.KEY_HUD_POTION_Y,
+                PVPEssentialsClient.KEY_HUD_POTION_ANCHOR,
+                PotionHud.getDefaultXPercent(screenWidth), PotionHud.getDefaultYPercent(screenHeight),
+                Anchor.BOTTOM_RIGHT);
+        loadPosition(HUD_MISC, PVPEssentialsClient.KEY_HUD_MISC_X, PVPEssentialsClient.KEY_HUD_MISC_Y,
+                PVPEssentialsClient.KEY_HUD_MISC_ANCHOR,
+                MiscHud.getDefaultXPercent(screenWidth), MiscHud.getDefaultYPercent(screenHeight),
+                Anchor.BOTTOM_RIGHT);
+        loadPosition(HUD_ARROW, PVPEssentialsClient.KEY_HUD_ARROW_X, PVPEssentialsClient.KEY_HUD_ARROW_Y,
+                PVPEssentialsClient.KEY_HUD_ARROW_ANCHOR,
+                ArrowHud.getDefaultXPercent(screenWidth), ArrowHud.getDefaultYPercent(screenHeight),
+                Anchor.CENTER);
+        loadPosition(HUD_DAMAGE, PVPEssentialsClient.KEY_HUD_DAMAGE_X, PVPEssentialsClient.KEY_HUD_DAMAGE_Y,
+                PVPEssentialsClient.KEY_HUD_DAMAGE_ANCHOR,
+                DamageIndicatorHud.getDefaultXPercent(screenWidth), DamageIndicatorHud.getDefaultYPercent(screenHeight),
+                Anchor.CENTER);
     }
 
-    private void loadPosition(String hudId, String keyX, String keyY) {
-        int centerX = screenWidth / 2;
-        int defaultX, defaultY;
-        switch (hudId) {
-            case HUD_ARMOR:
-                defaultX = centerX - 91 - 7 - 82;
-                defaultY = screenHeight - 22;
-                break;
-            case HUD_POTION:
-                defaultX = centerX + 91 + 7;
-                defaultY = screenHeight - 22;
-                break;
-            case HUD_MISC:
-                defaultX = centerX + 91 + 7;
-                defaultY = screenHeight - 44;
-                break;
-            case HUD_ARROW:
-                defaultX = centerX + 12;
-                defaultY = screenHeight / 2 - 8;
-                break;
-            case HUD_DAMAGE:
-                defaultX = centerX - 35;
-                defaultY = screenHeight / 2 - 4;
-                break;
-            default:
-                defaultX = 10;
-                defaultY = 10;
-        }
-
-        int x = readConfigInt(keyX, defaultX);
-        int y = readConfigInt(keyY, defaultY);
+    private void loadPosition(String hudId, String keyX, String keyY, String keyAnchor,
+                              float defaultXPercent, float defaultYPercent, Anchor defaultAnchor) {
+        float x = readConfigFloat(keyX, defaultXPercent);
+        float y = readConfigFloat(keyY, defaultYPercent);
+        Anchor a = readConfigAnchor(keyAnchor, defaultAnchor);
         posX.put(hudId, x);
         posY.put(hudId, y);
+        anchors.put(hudId, a);
     }
 
-    private int readConfigInt(String key, int defaultValue) {
+    private float readConfigFloat(String key, float defaultValue) {
         var opt = ConfigManager.getOption(key);
         if (opt != null && opt.value != null && !opt.value.isEmpty()) {
             try {
-                return Integer.parseInt(opt.value);
+                float val = Float.parseFloat(opt.value);
+                // Legacy migration: values > 2.0 were stored as raw pixel coordinates
+                if (val > 2.0f) return defaultValue;
+                return clampPercent(val);
             } catch (NumberFormatException ignored) {}
         }
         return defaultValue;
     }
 
+    private Anchor readConfigAnchor(String key, Anchor defaultAnchor) {
+        var opt = ConfigManager.getOption(key);
+        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
+            try { return Anchor.valueOf(opt.value.toUpperCase()); }
+            catch (IllegalArgumentException ignored) {}
+        }
+        return defaultAnchor;
+    }
+
     private void savePositionsToConfig() {
-        savePosition(HUD_ARMOR, PVPEssentialsClient.KEY_HUD_ARMOR_X, PVPEssentialsClient.KEY_HUD_ARMOR_Y);
-        savePosition(HUD_POTION, PVPEssentialsClient.KEY_HUD_POTION_X, PVPEssentialsClient.KEY_HUD_POTION_Y);
-        savePosition(HUD_MISC, PVPEssentialsClient.KEY_HUD_MISC_X, PVPEssentialsClient.KEY_HUD_MISC_Y);
-        savePosition(HUD_ARROW, PVPEssentialsClient.KEY_HUD_ARROW_X, PVPEssentialsClient.KEY_HUD_ARROW_Y);
-        savePosition(HUD_DAMAGE, PVPEssentialsClient.KEY_HUD_DAMAGE_X, PVPEssentialsClient.KEY_HUD_DAMAGE_Y);
+        savePosition(HUD_ARMOR, PVPEssentialsClient.KEY_HUD_ARMOR_X, PVPEssentialsClient.KEY_HUD_ARMOR_Y,
+                PVPEssentialsClient.KEY_HUD_ARMOR_ANCHOR);
+        savePosition(HUD_POTION, PVPEssentialsClient.KEY_HUD_POTION_X, PVPEssentialsClient.KEY_HUD_POTION_Y,
+                PVPEssentialsClient.KEY_HUD_POTION_ANCHOR);
+        savePosition(HUD_MISC, PVPEssentialsClient.KEY_HUD_MISC_X, PVPEssentialsClient.KEY_HUD_MISC_Y,
+                PVPEssentialsClient.KEY_HUD_MISC_ANCHOR);
+        savePosition(HUD_ARROW, PVPEssentialsClient.KEY_HUD_ARROW_X, PVPEssentialsClient.KEY_HUD_ARROW_Y,
+                PVPEssentialsClient.KEY_HUD_ARROW_ANCHOR);
+        savePosition(HUD_DAMAGE, PVPEssentialsClient.KEY_HUD_DAMAGE_X, PVPEssentialsClient.KEY_HUD_DAMAGE_Y,
+                PVPEssentialsClient.KEY_HUD_DAMAGE_ANCHOR);
     }
 
-    private void savePosition(String hudId, String keyX, String keyY) {
-        writeConfigValue(keyX, posX.getOrDefault(hudId, 0));
-        writeConfigValue(keyY, posY.getOrDefault(hudId, 0));
+    private void savePosition(String hudId, String keyX, String keyY, String keyAnchor) {
+        writeConfigValue(keyX, posX.getOrDefault(hudId, 0.5f));
+        writeConfigValue(keyY, posY.getOrDefault(hudId, 0.5f));
+        writeConfigValue(keyAnchor, anchors.getOrDefault(hudId, Anchor.TOP_LEFT).name());
     }
 
-    private void writeConfigValue(String key, int value) {
+    private void writeConfigValue(String key, float value) {
         var opt = ConfigManager.getOption(key);
         if (opt != null) {
             opt.value = String.valueOf(value);
+        }
+    }
+
+    private void writeConfigValue(String key, String value) {
+        var opt = ConfigManager.getOption(key);
+        if (opt != null) {
+            opt.value = value;
         }
     }
 
