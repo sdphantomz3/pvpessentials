@@ -1,11 +1,10 @@
 package com.drypted.pvpessentials.client.screen;
 
-import com.drypted.dlib.client.config.ConfigManager;
-import com.drypted.pvpessentials.client.PVPEssentialsClient;
 import com.drypted.pvpessentials.client.hud.Anchor;
 import com.drypted.pvpessentials.client.hud.ArmorHud;
 import com.drypted.pvpessentials.client.hud.ArrowHud;
 import com.drypted.pvpessentials.client.hud.DamageIndicatorHud;
+import com.drypted.pvpessentials.client.hud.HudLayoutStorage;
 import com.drypted.pvpessentials.client.hud.MiscHud;
 import com.drypted.pvpessentials.client.hud.PotionHud;
 import net.minecraft.client.Minecraft;
@@ -22,7 +21,7 @@ public class HudEditorScreen extends Screen {
 
     private static final Component TITLE = Component.literal("HUD Layout Editor");
 
-    // HUD element identifiers
+    // HUD element identifiers (must match HudLayoutStorage keys)
     public static final String HUD_ARMOR = "armor";
     public static final String HUD_POTION = "potion";
     public static final String HUD_MISC = "misc";
@@ -34,7 +33,7 @@ public class HudEditorScreen extends Screen {
     private static final HudElement[] HUD_ELEMENTS = {
             new HudElement(HUD_ARMOR, "Armor HUD", 82, 22),
             new HudElement(HUD_POTION, "Potion HUD", 82, 22),
-            new HudElement(HUD_MISC, "Misc HUD", 82, 22),
+            new HudElement(HUD_MISC, "Misc HUD", 22, 22),
             new HudElement(HUD_ARROW, "Arrow HUD", 30, 18),
             new HudElement(HUD_DAMAGE, "Damage Indicator", 30, 14),
     };
@@ -72,8 +71,8 @@ public class HudEditorScreen extends Screen {
         screenWidth = mc.getWindow().getGuiScaledWidth();
         screenHeight = mc.getWindow().getGuiScaledHeight();
 
-        // Load current positions from config
-        loadPositionsFromConfig();
+        // Load current positions from HudLayoutStorage
+        loadPositionsFromStorage();
 
         // Cache originals for discard
         for (String id : posX.keySet()) {
@@ -353,7 +352,7 @@ public class HudEditorScreen extends Screen {
     // ---------- Button actions ----------
 
     private void saveAndClose() {
-        savePositionsToConfig();
+        savePositionsToStorage();
         clearPreviewMode();
         this.onClose();
     }
@@ -367,7 +366,7 @@ public class HudEditorScreen extends Screen {
         for (String id : originalAnchors.keySet()) {
             anchors.put(id, originalAnchors.get(id));
         }
-        savePositionsToConfig();
+        savePositionsToStorage();
         clearPreviewMode();
         this.onClose();
     }
@@ -388,101 +387,51 @@ public class HudEditorScreen extends Screen {
 
         posX.put(HUD_ARROW, ArrowHud.getDefaultXPercent(screenWidth));
         posY.put(HUD_ARROW, ArrowHud.getDefaultYPercent(screenHeight));
-        anchors.put(HUD_ARROW, Anchor.CENTER);
+        anchors.put(HUD_ARROW, Anchor.TOP_LEFT);
 
         posX.put(HUD_DAMAGE, DamageIndicatorHud.getDefaultXPercent(screenWidth));
         posY.put(HUD_DAMAGE, DamageIndicatorHud.getDefaultYPercent(screenHeight));
-        anchors.put(HUD_DAMAGE, Anchor.CENTER);
+        anchors.put(HUD_DAMAGE, Anchor.TOP_LEFT);
     }
 
-    // ---------- Config persistence ----------
+    // ---------- Persistence (via HudLayoutStorage) ----------
 
-    private void loadPositionsFromConfig() {
-        loadPosition(HUD_ARMOR, PVPEssentialsClient.KEY_HUD_ARMOR_X, PVPEssentialsClient.KEY_HUD_ARMOR_Y,
-                PVPEssentialsClient.KEY_HUD_ARMOR_ANCHOR,
-                ArmorHud.getDefaultXPercent(screenWidth), ArmorHud.getDefaultYPercent(screenHeight),
+    private void loadPositionsFromStorage() {
+        loadPosition(HUD_ARMOR, ArmorHud.getDefaultXPercent(screenWidth), ArmorHud.getDefaultYPercent(screenHeight),
                 Anchor.BOTTOM_LEFT);
-        loadPosition(HUD_POTION, PVPEssentialsClient.KEY_HUD_POTION_X, PVPEssentialsClient.KEY_HUD_POTION_Y,
-                PVPEssentialsClient.KEY_HUD_POTION_ANCHOR,
-                PotionHud.getDefaultXPercent(screenWidth), PotionHud.getDefaultYPercent(screenHeight),
+        loadPosition(HUD_POTION, PotionHud.getDefaultXPercent(screenWidth), PotionHud.getDefaultYPercent(screenHeight),
                 Anchor.BOTTOM_RIGHT);
-        loadPosition(HUD_MISC, PVPEssentialsClient.KEY_HUD_MISC_X, PVPEssentialsClient.KEY_HUD_MISC_Y,
-                PVPEssentialsClient.KEY_HUD_MISC_ANCHOR,
-                MiscHud.getDefaultXPercent(screenWidth), MiscHud.getDefaultYPercent(screenHeight),
+        loadPosition(HUD_MISC, MiscHud.getDefaultXPercent(screenWidth), MiscHud.getDefaultYPercent(screenHeight),
                 Anchor.BOTTOM_RIGHT);
-        loadPosition(HUD_ARROW, PVPEssentialsClient.KEY_HUD_ARROW_X, PVPEssentialsClient.KEY_HUD_ARROW_Y,
-                PVPEssentialsClient.KEY_HUD_ARROW_ANCHOR,
-                ArrowHud.getDefaultXPercent(screenWidth), ArrowHud.getDefaultYPercent(screenHeight),
-                Anchor.CENTER);
-        loadPosition(HUD_DAMAGE, PVPEssentialsClient.KEY_HUD_DAMAGE_X, PVPEssentialsClient.KEY_HUD_DAMAGE_Y,
-                PVPEssentialsClient.KEY_HUD_DAMAGE_ANCHOR,
-                DamageIndicatorHud.getDefaultXPercent(screenWidth), DamageIndicatorHud.getDefaultYPercent(screenHeight),
-                Anchor.CENTER);
+        loadPosition(HUD_ARROW, ArrowHud.getDefaultXPercent(screenWidth), ArrowHud.getDefaultYPercent(screenHeight),
+                Anchor.TOP_LEFT);
+        loadPosition(HUD_DAMAGE, DamageIndicatorHud.getDefaultXPercent(screenWidth), DamageIndicatorHud.getDefaultYPercent(screenHeight),
+                Anchor.TOP_LEFT);
     }
 
-    private void loadPosition(String hudId, String keyX, String keyY, String keyAnchor,
-                              float defaultXPercent, float defaultYPercent, Anchor defaultAnchor) {
-        float x = readConfigFloat(keyX, defaultXPercent);
-        float y = readConfigFloat(keyY, defaultYPercent);
-        Anchor a = readConfigAnchor(keyAnchor, defaultAnchor);
+    private void loadPosition(String hudId, float defaultXPercent, float defaultYPercent, Anchor defaultAnchor) {
+        float x = HudLayoutStorage.getX(hudId, defaultXPercent);
+        float y = HudLayoutStorage.getY(hudId, defaultYPercent);
+        Anchor a = HudLayoutStorage.getAnchor(hudId, defaultAnchor);
         posX.put(hudId, x);
         posY.put(hudId, y);
         anchors.put(hudId, a);
     }
 
-    private float readConfigFloat(String key, float defaultValue) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try {
-                float val = Float.parseFloat(opt.value);
-                // Legacy migration: values > 2.0 were stored as raw pixel coordinates
-                if (val > 2.0f) return defaultValue;
-                return clampPercent(val);
-            } catch (NumberFormatException ignored) {}
-        }
-        return defaultValue;
+    private void savePositionsToStorage() {
+        savePosition(HUD_ARMOR);
+        savePosition(HUD_POTION);
+        savePosition(HUD_MISC);
+        savePosition(HUD_ARROW);
+        savePosition(HUD_DAMAGE);
+        HudLayoutStorage.save();
     }
 
-    private Anchor readConfigAnchor(String key, Anchor defaultAnchor) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Anchor.valueOf(opt.value.toUpperCase()); }
-            catch (IllegalArgumentException ignored) {}
-        }
-        return defaultAnchor;
-    }
-
-    private void savePositionsToConfig() {
-        savePosition(HUD_ARMOR, PVPEssentialsClient.KEY_HUD_ARMOR_X, PVPEssentialsClient.KEY_HUD_ARMOR_Y,
-                PVPEssentialsClient.KEY_HUD_ARMOR_ANCHOR);
-        savePosition(HUD_POTION, PVPEssentialsClient.KEY_HUD_POTION_X, PVPEssentialsClient.KEY_HUD_POTION_Y,
-                PVPEssentialsClient.KEY_HUD_POTION_ANCHOR);
-        savePosition(HUD_MISC, PVPEssentialsClient.KEY_HUD_MISC_X, PVPEssentialsClient.KEY_HUD_MISC_Y,
-                PVPEssentialsClient.KEY_HUD_MISC_ANCHOR);
-        savePosition(HUD_ARROW, PVPEssentialsClient.KEY_HUD_ARROW_X, PVPEssentialsClient.KEY_HUD_ARROW_Y,
-                PVPEssentialsClient.KEY_HUD_ARROW_ANCHOR);
-        savePosition(HUD_DAMAGE, PVPEssentialsClient.KEY_HUD_DAMAGE_X, PVPEssentialsClient.KEY_HUD_DAMAGE_Y,
-                PVPEssentialsClient.KEY_HUD_DAMAGE_ANCHOR);
-    }
-
-    private void savePosition(String hudId, String keyX, String keyY, String keyAnchor) {
-        writeConfigValue(keyX, posX.getOrDefault(hudId, 0.5f));
-        writeConfigValue(keyY, posY.getOrDefault(hudId, 0.5f));
-        writeConfigValue(keyAnchor, anchors.getOrDefault(hudId, Anchor.TOP_LEFT).name());
-    }
-
-    private void writeConfigValue(String key, float value) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null) {
-            opt.value = String.valueOf(value);
-        }
-    }
-
-    private void writeConfigValue(String key, String value) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null) {
-            opt.value = value;
-        }
+    private void savePosition(String hudId) {
+        HudLayoutStorage.set(hudId,
+                posX.getOrDefault(hudId, 0.5f),
+                posY.getOrDefault(hudId, 0.5f),
+                anchors.getOrDefault(hudId, Anchor.TOP_LEFT));
     }
 
     private static void clearPreviewMode() {

@@ -21,9 +21,8 @@ public class MiscHud {
 
     private static final Identifier HOTBAR_TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/sprites/hud/hotbar.png");
     private static final int SLOT_PX = 20;
-    private static final int MAX_COLS = 4;
 
-    private static final int ELEM_WIDTH = 82;
+    private static final int ELEM_WIDTH = 22;  // one slot wide + border
     private static final int ELEM_HEIGHT = 22;
 
     // Preview mode for HUD editor
@@ -41,43 +40,43 @@ public class MiscHud {
         return opt != null && Boolean.parseBoolean(opt.value);
     }
 
+    private static boolean isAutoAdjust() {
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_AUTO_ADJUST);
+        return opt != null && "Auto Adjust".equals(opt.value);
+    }
+
+    private static boolean isVerticalStack() {
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_MISC_VERTICAL_STACK);
+        return opt != null && Boolean.parseBoolean(opt.value);
+    }
+
     private int[] getPosition(int screenWidth, int screenHeight) {
         if (previewMode) {
             return previewAnchor.toPixel(previewX, previewY, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
         }
-        float xp = readPercent(PVPEssentialsClient.KEY_HUD_MISC_X, getDefaultXPercent(screenWidth));
-        float yp = readPercent(PVPEssentialsClient.KEY_HUD_MISC_Y, getDefaultYPercent(screenHeight));
-        Anchor anchor = readAnchor(PVPEssentialsClient.KEY_HUD_MISC_ANCHOR, Anchor.BOTTOM_RIGHT);
+        if (isAutoAdjust()) {
+            float xp = getDefaultXPercent(screenWidth);
+            float yp = getDefaultYPercent(screenHeight);
+            return Anchor.BOTTOM_RIGHT.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
+        }
+        float xp = HudLayoutStorage.getX("misc", getDefaultXPercent(screenWidth));
+        float yp = HudLayoutStorage.getY("misc", getDefaultYPercent(screenHeight));
+        Anchor anchor = HudLayoutStorage.getAnchor("misc", Anchor.BOTTOM_RIGHT);
         return anchor.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
     }
 
+    /**
+     * Default X percentage: attached to right border with small margin.
+     */
     public static float getDefaultXPercent(int screenWidth) {
-        return 1f - ((float) (screenWidth / 2 + 91 + 7) / screenWidth);
+        return (float) (screenWidth - 4) / screenWidth;
     }
 
+    /**
+     * Default Y percentage: attached to bottom border with small margin.
+     */
     public static float getDefaultYPercent(int screenHeight) {
-        return (float) (screenHeight - 44) / screenHeight;
-    }
-
-    private static float readPercent(String key, float defaultVal) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try {
-                float val = Float.parseFloat(opt.value);
-                if (val > 2.0f) return defaultVal;
-                return val;
-            } catch (NumberFormatException ignored) {}
-        }
-        return defaultVal;
-    }
-
-    private static Anchor readAnchor(String key, Anchor defaultAnchor) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Anchor.valueOf(opt.value.toUpperCase()); }
-            catch (IllegalArgumentException ignored) {}
-        }
-        return defaultAnchor;
+        return (float) (screenHeight - 4) / screenHeight;
     }
 
     /**
@@ -120,7 +119,11 @@ public class MiscHud {
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
-        if (!isEnabled()) return;
+        if (!isEnabled()) {
+            // Still render popup overlay even if MiscHUD is disabled
+            PopupManager.render(graphics);
+            return;
+        }
         if (previewMode) return;
 
         Minecraft minecraft = Minecraft.getInstance();
@@ -157,7 +160,10 @@ public class MiscHud {
         int startX = pos[0];
         int baseYPos = pos[1];
 
-        renderMisc(graphics, itemsToRender, startX, baseYPos);
+        renderMisc(graphics, itemsToRender, startX, baseYPos, isVerticalStack());
+
+        // Render popup overlay if active (handles auto-adjust error popup)
+        PopupManager.render(graphics);
     }
 
     /**
@@ -188,7 +194,7 @@ public class MiscHud {
             }
         }
 
-        renderMisc(graphics, itemsToRender, x, y);
+        renderMisc(graphics, itemsToRender, x, y, isVerticalStack());
     }
 
     private static List<Item> getTrackedItemsStatic() {
@@ -216,43 +222,81 @@ public class MiscHud {
         return new ArrayList<>(itemSet);
     }
 
-    private static void renderMisc(GuiGraphicsExtractor g, List<ItemStack> items, int startX, int baseYPos) {
+    private static void renderMisc(GuiGraphicsExtractor g, List<ItemStack> items, int startX, int baseYPos, boolean verticalStack) {
         int totalItems = items.size();
-        int itemsPerRow = Math.min(MAX_COLS, totalItems);
-        int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
-        int slotsOnBottomRow = totalItems - (totalRows - 1) * itemsPerRow;
-        if (slotsOnBottomRow <= 0) slotsOnBottomRow = itemsPerRow;
 
-        int currentY = baseYPos + 22;
-        for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
-            boolean isTopRow = (rowIndex == 0);
-            boolean isBottomRow = (rowIndex == totalRows - 1);
-            int slotsInThisRow = isBottomRow ? slotsOnBottomRow : itemsPerRow;
+        if (verticalStack) {
+            // Vertical stacking: one item per row, expanding upward from bottom
+            int itemsPerRow = 1;
+            int totalRows = totalItems;
 
-            int srcV;
-            int srcHeight;
-            if (totalRows == 1) {
-                srcV = 0; srcHeight = 22;
-            } else if (isTopRow) {
-                srcV = 1; srcHeight = 21;
-            } else if (isBottomRow) {
-                srcV = 0; srcHeight = 21;
-            } else {
-                srcV = 1; srcHeight = 20;
+            int currentY = baseYPos + 22;
+            for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+                boolean isTopRow = (rowIndex == 0);
+                boolean isBottomRow = (rowIndex == totalRows - 1);
+
+                int srcV;
+                int srcHeight;
+                if (totalRows == 1) {
+                    srcV = 0; srcHeight = 22;
+                } else if (isTopRow) {
+                    srcV = 1; srcHeight = 21;
+                } else if (isBottomRow) {
+                    srcV = 0; srcHeight = 21;
+                } else {
+                    srcV = 1; srcHeight = 20;
+                }
+
+                int rowTextureWidth = SLOT_PX + 1;
+                currentY -= srcHeight;
+                g.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, currentY, 0, srcV, rowTextureWidth, srcHeight, 182, 22);
+                g.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + rowTextureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
             }
 
-            int rowTextureWidth = (slotsInThisRow * SLOT_PX) + 1;
-            currentY -= srcHeight;
-            g.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, currentY, 0, srcV, rowTextureWidth, srcHeight, 182, 22);
-            g.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + rowTextureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
-        }
+            for (int i = 0; i < totalItems; i++) {
+                int itemX = startX + 3;
+                int itemY = (baseYPos + 3) - (i * SLOT_PX);
+                RenderUtil.drawScaledItemFactor(g, items.get(i), itemX, itemY, 1.0f);
+            }
+        } else {
+            // Horizontal layout: up to 4 items per row
+            int MAX_COLS = 4;
+            int itemsPerRow = Math.min(MAX_COLS, totalItems);
+            int totalRows = (int) Math.ceil((double) totalItems / itemsPerRow);
+            int slotsOnBottomRow = totalItems - (totalRows - 1) * itemsPerRow;
+            if (slotsOnBottomRow <= 0) slotsOnBottomRow = itemsPerRow;
 
-        for (int i = 0; i < totalItems; i++) {
-            int rowIndex = i / itemsPerRow;
-            int slotOffset = i % itemsPerRow;
-            int itemX = startX + 3 + (slotOffset * SLOT_PX);
-            int itemY = (baseYPos + 3) - (rowIndex * SLOT_PX);
-            RenderUtil.drawScaledItemFactor(g, items.get(i), itemX, itemY, 1.0f);
+            int currentY = baseYPos + 22;
+            for (int rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+                boolean isTopRow = (rowIndex == 0);
+                boolean isBottomRow = (rowIndex == totalRows - 1);
+                int slotsInThisRow = isBottomRow ? slotsOnBottomRow : itemsPerRow;
+
+                int srcV;
+                int srcHeight;
+                if (totalRows == 1) {
+                    srcV = 0; srcHeight = 22;
+                } else if (isTopRow) {
+                    srcV = 1; srcHeight = 21;
+                } else if (isBottomRow) {
+                    srcV = 0; srcHeight = 21;
+                } else {
+                    srcV = 1; srcHeight = 20;
+                }
+
+                int rowTextureWidth = (slotsInThisRow * SLOT_PX) + 1;
+                currentY -= srcHeight;
+                g.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX, currentY, 0, srcV, rowTextureWidth, srcHeight, 182, 22);
+                g.blit(RenderPipelines.GUI_TEXTURED, HOTBAR_TEXTURE, startX + rowTextureWidth, currentY, 181, srcV, 1, srcHeight, 182, 22);
+            }
+
+            for (int i = 0; i < totalItems; i++) {
+                int rowIndex = i / itemsPerRow;
+                int slotOffset = i % itemsPerRow;
+                int itemX = startX + 3 + (slotOffset * SLOT_PX);
+                int itemY = (baseYPos + 3) - (rowIndex * SLOT_PX);
+                RenderUtil.drawScaledItemFactor(g, items.get(i), itemX, itemY, 1.0f);
+            }
         }
     }
 }

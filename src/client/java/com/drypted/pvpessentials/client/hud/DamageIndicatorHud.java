@@ -50,43 +50,37 @@ public class DamageIndicatorHud {
         return 22;
     }
 
+    private static boolean isAutoAdjust() {
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_AUTO_ADJUST);
+        return opt != null && "Auto Adjust".equals(opt.value);
+    }
+
     private int[] getPosition(int screenWidth, int screenHeight) {
         if (previewMode) {
             return previewAnchor.toPixel(previewX, previewY, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
         }
-        float xp = readPercent(PVPEssentialsClient.KEY_HUD_DAMAGE_X, getDefaultXPercent(screenWidth));
-        float yp = readPercent(PVPEssentialsClient.KEY_HUD_DAMAGE_Y, getDefaultYPercent(screenHeight));
-        Anchor anchor = readAnchor(PVPEssentialsClient.KEY_HUD_DAMAGE_ANCHOR, Anchor.CENTER);
+        if (isAutoAdjust()) {
+            float xp = getDefaultXPercent(screenWidth);
+            float yp = getDefaultYPercent(screenHeight);
+            return Anchor.TOP_LEFT.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
+        }
+        float xp = HudLayoutStorage.getX("damage", getDefaultXPercent(screenWidth));
+        float yp = HudLayoutStorage.getY("damage", getDefaultYPercent(screenHeight));
+        Anchor anchor = HudLayoutStorage.getAnchor("damage", Anchor.TOP_LEFT);
         return anchor.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
     }
 
+    /**
+     * Default X percentage: on the left side of the crosshair.
+     * Position the right edge of the damage indicator just to the left of center.
+     */
     public static float getDefaultXPercent(int screenWidth) {
-        return (float) (screenWidth / 2 - 35) / screenWidth;
+        return (float) (screenWidth / 2f - ELEM_WIDTH - 4f) / screenWidth;
     }
 
+    /** Default Y percentage: centered vertically near crosshair. */
     public static float getDefaultYPercent(int screenHeight) {
-        return (float) (screenHeight / 2 - 4) / screenHeight;
-    }
-
-    private static float readPercent(String key, float defaultVal) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try {
-                float val = Float.parseFloat(opt.value);
-                if (val > 2.0f) return defaultVal;
-                return val;
-            } catch (NumberFormatException ignored) {}
-        }
-        return defaultVal;
-    }
-
-    private static Anchor readAnchor(String key, Anchor defaultAnchor) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Anchor.valueOf(opt.value.toUpperCase()); }
-            catch (IllegalArgumentException ignored) {}
-        }
-        return defaultAnchor;
+        return (float) (screenHeight / 2f - ELEM_HEIGHT / 2f) / screenHeight;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

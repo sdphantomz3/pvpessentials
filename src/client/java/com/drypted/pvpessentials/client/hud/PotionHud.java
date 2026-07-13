@@ -33,43 +33,38 @@ public class PotionHud {
         return opt != null && Boolean.parseBoolean(opt.value);
     }
 
+    private static boolean isAutoAdjust() {
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_AUTO_ADJUST);
+        return opt != null && "Auto Adjust".equals(opt.value);
+    }
+
     private int[] getPosition(int screenWidth, int screenHeight) {
         if (previewMode) {
             return previewAnchor.toPixel(previewX, previewY, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
         }
-        float xp = readPercent(PVPEssentialsClient.KEY_HUD_POTION_X, getDefaultXPercent(screenWidth));
-        float yp = readPercent(PVPEssentialsClient.KEY_HUD_POTION_Y, getDefaultYPercent(screenHeight));
-        Anchor anchor = readAnchor(PVPEssentialsClient.KEY_HUD_POTION_ANCHOR, Anchor.BOTTOM_RIGHT);
+        if (isAutoAdjust()) {
+            float xp = getDefaultXPercent(screenWidth);
+            float yp = getDefaultYPercent(screenHeight);
+            return Anchor.BOTTOM_RIGHT.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
+        }
+        float xp = HudLayoutStorage.getX("potion", getDefaultXPercent(screenWidth));
+        float yp = HudLayoutStorage.getY("potion", getDefaultYPercent(screenHeight));
+        Anchor anchor = HudLayoutStorage.getAnchor("potion", Anchor.BOTTOM_RIGHT);
         return anchor.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
     }
 
+    /**
+     * Default X percentage: one slot difference from hotbar on right side.
+     * With BOTTOM_RIGHT anchor, positions the LEFT edge one slot (20px) right of hotbar right edge.
+     * x = (center + 91 + 20 + ELEM_WIDTH).
+     */
     public static float getDefaultXPercent(int screenWidth) {
-        return 1f - ((float) (screenWidth / 2 + 91 + 7) / screenWidth);
+        return (float) (screenWidth / 2f + 91f + 20f + ELEM_WIDTH) / screenWidth;
     }
 
+    /** Default Y percentage: bottom of screen. */
     public static float getDefaultYPercent(int screenHeight) {
         return (float) (screenHeight - ELEM_HEIGHT) / screenHeight;
-    }
-
-    private static float readPercent(String key, float defaultVal) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try {
-                float val = Float.parseFloat(opt.value);
-                if (val > 2.0f) return defaultVal;
-                return val;
-            } catch (NumberFormatException ignored) {}
-        }
-        return defaultVal;
-    }
-
-    private static Anchor readAnchor(String key, Anchor defaultAnchor) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Anchor.valueOf(opt.value.toUpperCase()); }
-            catch (IllegalArgumentException ignored) {}
-        }
-        return defaultAnchor;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

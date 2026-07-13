@@ -38,46 +38,37 @@ public class ArmorHud {
         return opt != null && Boolean.parseBoolean(opt.value);
     }
 
+    private static boolean isAutoAdjust() {
+        var opt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_AUTO_ADJUST);
+        return opt != null && "Auto Adjust".equals(opt.value);
+    }
+
     private int[] getPosition(int screenWidth, int screenHeight) {
         if (previewMode) {
             return previewAnchor.toPixel(previewX, previewY, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
         }
-        float xp = readPercent(PVPEssentialsClient.KEY_HUD_ARMOR_X, getDefaultXPercent(screenWidth));
-        float yp = readPercent(PVPEssentialsClient.KEY_HUD_ARMOR_Y, getDefaultYPercent(screenHeight));
-        Anchor anchor = readAnchor(PVPEssentialsClient.KEY_HUD_ARMOR_ANCHOR, Anchor.BOTTOM_LEFT);
+        if (isAutoAdjust()) {
+            float xp = getDefaultXPercent(screenWidth);
+            float yp = getDefaultYPercent(screenHeight);
+            return Anchor.BOTTOM_LEFT.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
+        }
+        float xp = HudLayoutStorage.getX("armor", getDefaultXPercent(screenWidth));
+        float yp = HudLayoutStorage.getY("armor", getDefaultYPercent(screenHeight));
+        Anchor anchor = HudLayoutStorage.getAnchor("armor", Anchor.BOTTOM_LEFT);
         return anchor.toPixel(xp, yp, screenWidth, screenHeight, ELEM_WIDTH, ELEM_HEIGHT);
     }
 
-    /** Default X percentage: left of hotbar, as fraction of screen width. */
+    /**
+     * Default X percentage: one slot difference from offhand, on left side of hotbar.
+     * Offhand is at (center - 91 - 20), one slot gap = 20px, then the armor HUD.
+     */
     public static float getDefaultXPercent(int screenWidth) {
-        return (float) (screenWidth / 2 - 91 - 7 - ELEM_WIDTH) / screenWidth;
+        return (float) (screenWidth / 2f - 91f - 20f - 20f - ELEM_WIDTH) / screenWidth;
     }
 
-    /** Default Y percentage: bottom of screen above hotbar, as fraction of screen height. */
+    /** Default Y percentage: bottom of screen. */
     public static float getDefaultYPercent(int screenHeight) {
         return (float) (screenHeight - ELEM_HEIGHT) / screenHeight;
-    }
-
-    private static float readPercent(String key, float defaultVal) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try {
-                float val = Float.parseFloat(opt.value);
-                // Legacy migration: values > 2.0 were stored as raw pixels
-                if (val > 2.0f) return defaultVal;
-                return val;
-            } catch (NumberFormatException ignored) {}
-        }
-        return defaultVal;
-    }
-
-    private static Anchor readAnchor(String key, Anchor defaultAnchor) {
-        var opt = ConfigManager.getOption(key);
-        if (opt != null && opt.value != null && !opt.value.isEmpty()) {
-            try { return Anchor.valueOf(opt.value.toUpperCase()); }
-            catch (IllegalArgumentException ignored) {}
-        }
-        return defaultAnchor;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

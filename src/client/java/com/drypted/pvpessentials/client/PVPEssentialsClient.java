@@ -7,6 +7,8 @@ import com.drypted.pvpessentials.client.hud.DamageIndicatorHud;
 import com.drypted.pvpessentials.client.hud.PotionHud;
 import com.drypted.pvpessentials.client.hud.ArrowHud;
 import com.drypted.pvpessentials.client.hud.MiscHud;
+import com.drypted.pvpessentials.client.hud.HudLayoutStorage;
+import com.drypted.pvpessentials.client.hud.PopupManager;
 import com.drypted.pvpessentials.client.screen.HudEditorScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
@@ -29,6 +31,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
 
         public static final String KEY_MISC_ENABLED = "pvpessentials.mischud.enabled";
         public static final String KEY_MISC_ITEMS = "pvpessentials.mischud.items";
+        public static final String KEY_MISC_VERTICAL_STACK = "pvpessentials.mischud.verticalstack";
 
         public static final String KEY_ARROW_ENABLED = "pvpessentials.arrowhud.enabled";
 
@@ -53,6 +56,8 @@ public class PVPEssentialsClient implements ClientModInitializer {
         public static final String KEY_HUD_DAMAGE_X = "pvpessentials.hudlayout.damage_x";
         public static final String KEY_HUD_DAMAGE_Y = "pvpessentials.hudlayout.damage_y";
         public static final String KEY_HUD_DAMAGE_ANCHOR = "pvpessentials.hudlayout.damage_anchor";
+
+        public static final String KEY_HUD_AUTO_ADJUST = "pvpessentials.hudlayout.autoadjust";
 
         public static final String KEY_LOWFIRE_ENABLED = "pvpessentials.lowfire.enabled";
         public static final String KEY_LOWFIRE_YOFFSET = "pvpessentials.lowfire.yoffset";
@@ -94,6 +99,9 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 "minecraft:golden_apple,minecraft:ender_pearl,minecraft:cobweb,minecraft:enchanted_golden_apple,minecraft:experience_bottle",
                                 null,
                                 "Select items to count and display in the Misc HUD. Add as many as you like.");
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Misc HUD", "Vertical Stack",
+                                KEY_MISC_VERTICAL_STACK, "toggle", "true", null,
+                                "When enabled, Misc HUD items expand vertically (one per row) instead of horizontally.");
 
                 // ---- Arrow HUD ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Arrow HUD", "Enabled",
@@ -109,69 +117,24 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Damage Indicator", "Lifetime (ticks)",
                                 KEY_DAMAGE_LIFETIME, "number", "22", null, null);
 
-                // ---- HUD Layout Positions (normalized percentages, 0.0–1.0) ----
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor X",
-                                KEY_HUD_ARMOR_X, "number", "0", null,
-                                "Normalized X position (0.0=left, 1.0=right). Use Edit HUD Layout for drag-and-drop.");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor Y",
-                                KEY_HUD_ARMOR_Y, "number", "0", null,
-                                "Normalized Y position (0.0=top, 1.0=bottom). Use Edit HUD Layout for drag-and-drop.");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Armor Anchor",
-                                KEY_HUD_ARMOR_ANCHOR, "cycle", "BOTTOM_LEFT",
-                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
-                                "Which corner of the Armor HUD the position refers to.");
-
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion X",
-                                KEY_HUD_POTION_X, "number", "0", null,
-                                "Normalized X position (0.0=left, 1.0=right).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion Y",
-                                KEY_HUD_POTION_Y, "number", "0", null,
-                                "Normalized Y position (0.0=top, 1.0=bottom).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Potion Anchor",
-                                KEY_HUD_POTION_ANCHOR, "cycle", "BOTTOM_RIGHT",
-                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
-                                "Which corner of the Potion HUD the position refers to.");
-
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc X",
-                                KEY_HUD_MISC_X, "number", "0", null,
-                                "Normalized X position (0.0=left, 1.0=right).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc Y",
-                                KEY_HUD_MISC_Y, "number", "0", null,
-                                "Normalized Y position (0.0=top, 1.0=bottom).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Misc Anchor",
-                                KEY_HUD_MISC_ANCHOR, "cycle", "BOTTOM_RIGHT",
-                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
-                                "Which corner of the Misc HUD the position refers to.");
-
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow X",
-                                KEY_HUD_ARROW_X, "number", "0", null,
-                                "Normalized X position (0.0=left, 1.0=right).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow Y",
-                                KEY_HUD_ARROW_Y, "number", "0", null,
-                                "Normalized Y position (0.0=top, 1.0=bottom).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Arrow Anchor",
-                                KEY_HUD_ARROW_ANCHOR, "cycle", "CENTER",
-                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
-                                "Which corner of the Arrow HUD the position refers to.");
-
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage X",
-                                KEY_HUD_DAMAGE_X, "number", "0", null,
-                                "Normalized X position (0.0=left, 1.0=right).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage Y",
-                                KEY_HUD_DAMAGE_Y, "number", "0", null,
-                                "Normalized Y position (0.0=top, 1.0=bottom).");
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Damage Anchor",
-                                KEY_HUD_DAMAGE_ANCHOR, "cycle", "CENTER",
-                                List.of("TOP_LEFT", "TOP_RIGHT", "BOTTOM_LEFT", "BOTTOM_RIGHT", "CENTER"),
-                                "Which corner of the Damage Indicator the position refers to.");
+                // ---- HUD Layout ----
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Mode",
+                                KEY_HUD_AUTO_ADJUST, "cycle", "Auto Adjust",
+                                List.of("Auto Adjust", "Set Manually"),
+                                "Auto Adjust: HUDs auto-position based on screen size. Set Manually: use the HUD Layout Editor to position HUDs freely.");
 
                 // ---- HUD Layout Editor Action ----
                 ConfigManager.registerAction(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Edit HUD Layout",
                                 "pvpessentials.hudlayout.edit", "Open Editor",
                                 () -> {
+                                        var modeOpt = ConfigManager.getOption(KEY_HUD_AUTO_ADJUST);
+                                        if (modeOpt != null && "Auto Adjust".equals(modeOpt.value)) {
+                                                PopupManager.show();
+                                                return;
+                                        }
                                         Minecraft.getInstance().gui.setScreen(new HudEditorScreen());
                                 },
-                                "Opens a drag-and-drop editor to position all HUD elements on screen.");
+                                "Opens a drag-and-drop editor to position all HUD elements on screen. Only available in Set Manually mode.");
 
                 // ---- No Potion Particles ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion Particles", "Enabled",
@@ -219,6 +182,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
         @Override
         public void onInitializeClient() {
                 createConfig();
+                HudLayoutStorage.load();
 
                 DamageTracker.initialize();
 
