@@ -54,17 +54,17 @@ public class PotionHud {
     }
 
     /**
-     * Default X percentage: one slot difference from hotbar on right side.
-     * With BOTTOM_RIGHT anchor, positions the LEFT edge one slot (20px) right of hotbar right edge.
-     * x = (center + 91 + 20 + ELEM_WIDTH).
+     * Default X percentage: right side of the hotbar with a 7px gap.
+     * Because Anchor is BOTTOM_RIGHT, this calculates the RIGHT edge of the HUD.
      */
     public static float getDefaultXPercent(int screenWidth) {
-        return (float) (screenWidth / 2f + 91f + 20f + ELEM_WIDTH) / screenWidth;
+        // Center + hotbar(91) + gap(7) + HUD width
+        return (float) (screenWidth / 2f + 98f + ELEM_WIDTH) / screenWidth;
     }
 
-    /** Default Y percentage: bottom of screen. */
+    /** Default Y percentage: flush with bottom of screen (anchor handles ELEM_HEIGHT offset). */
     public static float getDefaultYPercent(int screenHeight) {
-        return (float) (screenHeight - ELEM_HEIGHT) / screenHeight;
+        return 1.0f;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

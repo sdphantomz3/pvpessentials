@@ -54,10 +54,10 @@ public class ArrowHud {
 
     /**
      * Default X percentage: on the right side of the crosshair.
-     * Position the left edge of the arrow HUD just to the right of center.
+     * Position the left edge of the arrow HUD with a comfortable gap from center.
      */
     public static float getDefaultXPercent(int screenWidth) {
-        return (float) (screenWidth / 2f + 4f) / screenWidth;
+        return (float) (screenWidth / 2f + 16f) / screenWidth;
     }
 
     /** Default Y percentage: centered vertically. */

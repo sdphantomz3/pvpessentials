@@ -59,16 +59,16 @@ public class ArmorHud {
     }
 
     /**
-     * Default X percentage: one slot difference from offhand, on left side of hotbar.
-     * Offhand is at (center - 91 - 20), one slot gap = 20px, then the armor HUD.
+     * Default X percentage: adjacent to offhand on left side of hotbar.
+     * Subtracts hotbar(91), gap(7), offhand(22), gap(7), and HUD width.
      */
     public static float getDefaultXPercent(int screenWidth) {
-        return (float) (screenWidth / 2f - 91f - 20f - 20f - ELEM_WIDTH) / screenWidth;
+        return (float) (screenWidth / 2f - 127f - ELEM_WIDTH) / screenWidth;
     }
 
-    /** Default Y percentage: bottom of screen. */
+    /** Default Y percentage: flush with bottom of screen (anchor handles ELEM_HEIGHT offset). */
     public static float getDefaultYPercent(int screenHeight) {
-        return (float) (screenHeight - ELEM_HEIGHT) / screenHeight;
+        return 1.0f;
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {

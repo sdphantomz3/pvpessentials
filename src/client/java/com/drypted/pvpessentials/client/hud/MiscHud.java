@@ -66,17 +66,15 @@ public class MiscHud {
     }
 
     /**
-     * Default X percentage: attached to right border with small margin.
+     * Default X percentage: flush with right border (anchor handles ELEM_WIDTH offset).
      */
     public static float getDefaultXPercent(int screenWidth) {
-        return (float) (screenWidth - 4) / screenWidth;
+        return 1.0f;
     }
 
-    /**
-     * Default Y percentage: attached to bottom border with small margin.
-     */
+    /** Default Y percentage: flush with bottom of screen (anchor handles ELEM_HEIGHT offset). */
     public static float getDefaultYPercent(int screenHeight) {
-        return (float) (screenHeight - 4) / screenHeight;
+        return 1.0f;
     }
 
     /**
@@ -119,11 +117,7 @@ public class MiscHud {
     }
 
     public void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
-        if (!isEnabled()) {
-            // Still render popup overlay even if MiscHUD is disabled
-            PopupManager.render(graphics);
-            return;
-        }
+        if (!isEnabled()) return;
         if (previewMode) return;
 
         Minecraft minecraft = Minecraft.getInstance();
@@ -161,9 +155,6 @@ public class MiscHud {
         int baseYPos = pos[1];
 
         renderMisc(graphics, itemsToRender, startX, baseYPos, isVerticalStack());
-
-        // Render popup overlay if active (handles auto-adjust error popup)
-        PopupManager.render(graphics);
     }
 
     /**

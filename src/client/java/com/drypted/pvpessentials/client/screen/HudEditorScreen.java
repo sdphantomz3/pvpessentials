@@ -1,5 +1,7 @@
 package com.drypted.pvpessentials.client.screen;
 
+import com.drypted.dlib.client.config.ConfigManager;
+import com.drypted.pvpessentials.client.PVPEssentialsClient;
 import com.drypted.pvpessentials.client.hud.Anchor;
 import com.drypted.pvpessentials.client.hud.ArmorHud;
 import com.drypted.pvpessentials.client.hud.ArrowHud;
@@ -61,8 +63,19 @@ public class HudEditorScreen extends Screen {
     private int screenWidth;
     private int screenHeight;
 
+    // Whether auto-adjust is enabled (if true, show error instead of HUD previews)
+    private boolean autoAdjustLocked = false;
+
+    // Previous screen to restore on close (DLib config)
+    private final Screen previousScreen;
+
     public HudEditorScreen() {
+        this(null);
+    }
+
+    public HudEditorScreen(Screen previousScreen) {
         super(TITLE);
+        this.previousScreen = previousScreen;
     }
 
     @Override
@@ -70,6 +83,10 @@ public class HudEditorScreen extends Screen {
         Minecraft mc = Minecraft.getInstance();
         screenWidth = mc.getWindow().getGuiScaledWidth();
         screenHeight = mc.getWindow().getGuiScaledHeight();
+
+        // Check if auto-adjust mode is active
+        var modeOpt = ConfigManager.getOption(PVPEssentialsClient.KEY_HUD_AUTO_ADJUST);
+        autoAdjustLocked = modeOpt != null && "Auto Adjust".equals(modeOpt.value);
 
         // Load current positions from HudLayoutStorage
         loadPositionsFromStorage();
@@ -81,25 +98,35 @@ public class HudEditorScreen extends Screen {
             originalAnchors.put(id, anchors.get(id));
         }
 
-        // Buttons above the hotbar area
-        int buttonY = screenHeight - 42;
-        int buttonWidth = 80;
-        int buttonHeight = 20;
-        int centerX = screenWidth / 2;
+        // Hotbar-sized button panel: 182px wide, 22px tall, centered, flush with hotbar top
+        int panelWidth = 182;
+        int panelHeight = 22;
+        int panelX = screenWidth / 2 - panelWidth / 2;
+        int panelY = screenHeight - 22;
 
-        saveButton = Button.builder(Component.literal("Save"), btn -> saveAndClose())
-                .pos(centerX - 130, buttonY)
-                .size(buttonWidth, buttonHeight)
+        // 3 touching buttons: Save (green), Discard (red), Reset (blue)
+        int btnWidth = panelWidth / 3; // 60px each, touching (60+60+60=180, leaves 2px)
+        int btnHeight = 18;
+
+        saveButton = Button.builder(
+                Component.literal("\u2713").withColor(0x55FF55),
+                btn -> { saveAndClose(); })
+                .pos(panelX + 1, panelY + 2)
+                .size(btnWidth, btnHeight)
                 .build();
 
-        discardButton = Button.builder(Component.literal("Discard"), btn -> discardAndClose())
-                .pos(centerX - 40, buttonY)
-                .size(buttonWidth, buttonHeight)
+        discardButton = Button.builder(
+                Component.literal("\u2717").withColor(0xFF5555),
+                btn -> { discardAndClose(); })
+                .pos(panelX + 1 + btnWidth, panelY + 2)
+                .size(btnWidth, btnHeight)
                 .build();
 
-        resetButton = Button.builder(Component.literal("Reset to Default"), btn -> resetToDefault())
-                .pos(centerX + 50, buttonY)
-                .size(buttonWidth + 20, buttonHeight)
+        resetButton = Button.builder(
+                Component.literal("\u21BB").withColor(0x5555FF),
+                btn -> { resetToDefault(); })
+                .pos(panelX + 1 + 2 * btnWidth, panelY + 2)
+                .size(btnWidth, btnHeight)
                 .build();
 
         addRenderableWidget(saveButton);
@@ -112,6 +139,17 @@ public class HudEditorScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         Minecraft mc = Minecraft.getInstance();
+
+        if (autoAdjustLocked) {
+            // Auto Adjust mode: don't render HUD previews, show error message
+            drawHotbarReference(graphics);
+            String msg1 = "HUD Layout Editor is locked in Auto Adjust mode!";
+            String msg2 = "Switch to Set Manually in the config to unlock.";
+            graphics.centeredText(mc.font, msg1, screenWidth / 2, screenHeight / 2 - 14, 0xFFFF4444);
+            graphics.centeredText(mc.font, msg2, screenWidth / 2, screenHeight / 2, 0xFFFF4444);
+            super.extractRenderState(graphics, mouseX, mouseY, delta);
+            return;
+        }
 
         // Set preview mode on all HUDs
         setAllPreviewPositions();
@@ -132,7 +170,7 @@ public class HudEditorScreen extends Screen {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
 
         // Draw instructions
-        graphics.centeredText(mc.font, "Drag to reposition. Right-click HUD to cycle anchor. Buttons are above hotbar.",
+        graphics.centeredText(mc.font, "Drag to reposition. Right-click HUD to cycle anchor.",
                 screenWidth / 2, 10, 0xCCCCCC);
     }
 
@@ -237,7 +275,7 @@ public class HudEditorScreen extends Screen {
             int textWidth = mc.font.width(labelText);
             graphics.fill(x + w / 2 - textWidth / 2 - 2, labelY - 1,
                     x + w / 2 + textWidth / 2 + 2, labelY + 9, 0xAA000000);
-            graphics.centeredText(mc.font, labelText, x + w / 2, labelY, 0xFFFFFF);
+            graphics.centeredText(mc.font, labelText, x + w / 2, labelY, 0xFFFFFF00);
         }
     }
 
@@ -354,11 +392,10 @@ public class HudEditorScreen extends Screen {
     private void saveAndClose() {
         savePositionsToStorage();
         clearPreviewMode();
-        this.onClose();
+        closeAndRestore();
     }
 
     private void discardAndClose() {
-        // Restore original positions and anchors
         for (String id : originalX.keySet()) {
             posX.put(id, originalX.get(id));
             posY.put(id, originalY.get(id));
@@ -368,7 +405,18 @@ public class HudEditorScreen extends Screen {
         }
         savePositionsToStorage();
         clearPreviewMode();
-        this.onClose();
+        closeAndRestore();
+    }
+
+    /** Close this screen and restore the previous screen (DLib config). */
+    private void closeAndRestore() {
+        if (this.minecraft != null) {
+            if (previousScreen != null) {
+                this.minecraft.gui.setScreen(previousScreen);
+            } else {
+                this.onClose();
+            }
+        }
     }
 
     private void resetToDefault() {

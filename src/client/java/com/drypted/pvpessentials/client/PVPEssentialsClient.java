@@ -8,12 +8,12 @@ import com.drypted.pvpessentials.client.hud.PotionHud;
 import com.drypted.pvpessentials.client.hud.ArrowHud;
 import com.drypted.pvpessentials.client.hud.MiscHud;
 import com.drypted.pvpessentials.client.hud.HudLayoutStorage;
-import com.drypted.pvpessentials.client.hud.PopupManager;
 import com.drypted.pvpessentials.client.screen.HudEditorScreen;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.resources.Identifier;
 
 import java.util.List;
@@ -127,14 +127,10 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerAction(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Edit HUD Layout",
                                 "pvpessentials.hudlayout.edit", "Open Editor",
                                 () -> {
-                                        var modeOpt = ConfigManager.getOption(KEY_HUD_AUTO_ADJUST);
-                                        if (modeOpt != null && "Auto Adjust".equals(modeOpt.value)) {
-                                                PopupManager.show();
-                                                return;
-                                        }
-                                        Minecraft.getInstance().gui.setScreen(new HudEditorScreen());
+                                        Screen prev = Minecraft.getInstance().gui.screen();
+                                        Minecraft.getInstance().gui.setScreen(new HudEditorScreen(prev));
                                 },
-                                "Opens a drag-and-drop editor to position all HUD elements on screen. Only available in Set Manually mode.");
+                                "Opens a drag-and-drop editor to position all HUD elements on screen.");
 
                 // ---- No Potion Particles ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion Particles", "Enabled",
@@ -161,7 +157,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 KEY_SHIELD_IDLE_X, "number", "0.1", null,
                                 "Left/Right shift of the shield when idle.");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Y Offset",
-                                KEY_SHIELD_IDLE_Y, "number", "-0.15", null,
+                                KEY_SHIELD_IDLE_Y, "number", "-0.25", null,
                                 "Vertical shift of the shield when idle (negative = lower).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Z Offset",
                                 KEY_SHIELD_IDLE_Z, "number", "-0.2", null,
@@ -170,7 +166,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 KEY_SHIELD_BLOCKING_X, "number", "0", null,
                                 "Left/Right shift of the shield while blocking.");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking Y Offset",
-                                KEY_SHIELD_BLOCKING_Y, "number", "-0.1", null,
+                                KEY_SHIELD_BLOCKING_Y, "number", "-0.35", null,
                                 "Vertical shift of the shield while blocking (negative = lower).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking Z Offset",
                                 KEY_SHIELD_BLOCKING_Z, "number", "0", null,

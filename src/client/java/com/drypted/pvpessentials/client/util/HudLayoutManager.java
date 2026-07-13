@@ -17,8 +17,9 @@ public class HudLayoutManager {
     private static final int EDGE_MARGIN = 10;
     private static final int HOTBAR_HALF = 91;
     private static final int OFFHAND_GAP = 7;
+    private static final int OFFHAND_SLOT_WIDTH = 22;
     private static final int GAP = 3;
-
+    
     private static long lastGameTime = -1;
     private static final Map<String, HudDecl> declarations = new LinkedHashMap<>();
     private static final Map<String, int[]> resolved = new LinkedHashMap<>();
@@ -57,7 +58,8 @@ public class HudLayoutManager {
         lastScreenWidth = sw;
 
         int mx = sw / 2;
-        int hotbarLeft = mx - HOTBAR_HALF - OFFHAND_GAP;
+        // Space A-B gaps applied correctly here
+        int hotbarLeft = mx - HOTBAR_HALF - OFFHAND_GAP - OFFHAND_SLOT_WIDTH - OFFHAND_GAP;
         int hotbarRight = mx + HOTBAR_HALF + OFFHAND_GAP;
 
         Zone z = new Zone();
@@ -85,10 +87,6 @@ public class HudLayoutManager {
         zones.put(Anchor.SCREEN_RIGHT, z);
     }
 
-    /**
-     * How many 20-px item slots fit in {@code anchor}'s zone.
-     * Based purely on zone width — stable per screen size, never oscillates.
-     */
     public static int getMaxColumns(Anchor anchor, int slotPixelWidth) {
         ensureNewFrame();
         ensureZones();
@@ -123,26 +121,30 @@ public class HudLayoutManager {
         resolved.clear();
         ensureZones();
 
-        // Reset per-zone accumulators for this frame
         for (Zone z : zones.values()) {
             z.accumX = 0;
             z.accumY = 0;
             z.rowHeight = 0;
         }
 
-        // Process in registration order — deterministic every frame
         for (HudDecl hud : declarations.values()) {
             Zone z = zones.get(hud.anchor);
             if (z == null) continue;
 
-            // If this HUD doesn't fit on the current row, wrap to the next row
             if (z.accumX > 0 && z.accumX + hud.width > z.totalWidth) {
                 z.accumX = 0;
                 z.accumY += z.rowHeight + GAP;
                 z.rowHeight = 0;
             }
 
-            int x = z.accumX;
+            // [FIXED] Now properly applies the startX anchor and direction
+            int x;
+            if (z.direction == 1) {
+                x = z.startX + z.accumX;
+            } else {
+                x = z.startX - z.accumX - hud.width;
+            }
+            
             int y = z.accumY + hud.verticalOffset;
 
             z.accumX += hud.width + GAP;
