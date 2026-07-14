@@ -159,7 +159,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 KEY_SHIELD_IDLE_X, "number", "0.1", null,
                                 "Left/Right shift of the shield when idle.");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Y Offset",
-                                KEY_SHIELD_IDLE_Y, "number", "-0.25", null,
+                                KEY_SHIELD_IDLE_Y, "number", "-0.1", null,
                                 "Vertical shift of the shield when idle (negative = lower).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Z Offset",
                                 KEY_SHIELD_IDLE_Z, "number", "-0.2", null,
@@ -168,7 +168,7 @@ public class PVPEssentialsClient implements ClientModInitializer {
                                 KEY_SHIELD_BLOCKING_X, "number", "0", null,
                                 "Left/Right shift of the shield while blocking.");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking Y Offset",
-                                KEY_SHIELD_BLOCKING_Y, "number", "-0.35", null,
+                                KEY_SHIELD_BLOCKING_Y, "number", "-0.25", null,
                                 "Vertical shift of the shield while blocking (negative = lower).");
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking Z Offset",
                                 KEY_SHIELD_BLOCKING_Z, "number", "0", null,
@@ -183,7 +183,7 @@ ConfigManager.registerOption(
     "Disable Explosion Particles",
     "pvpessentials+explosion+disable_explosions", 
     "toggle", 
-    "false", 
+    "true", 
     null,
     "Disables the smoke, flash, and flying blocks from explosions."
 );
