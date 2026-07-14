@@ -1,6 +1,7 @@
 package com.drypted.pvpessentials.client.handler;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -17,7 +18,7 @@ public class DamageTracker {
         public final boolean isDamageTaken; 
         public final float amount;
         public int currentAgeTicks = 0;
-        public final int maxAgeTicks = 22; 
+        public int maxAgeTicks = 22; 
         public final double horizontalSpawnOffset;
         public final double verticalSpawnOffset;
         public final float rotationDegrees; 

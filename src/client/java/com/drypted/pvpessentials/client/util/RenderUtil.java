@@ -3,10 +3,10 @@ package com.drypted.pvpessentials.client.util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.item.ItemStack;
+
 import org.jspecify.annotations.NonNull;
 
 public class RenderUtil {
-
     public static void drawScaledItemFactor(GuiGraphics g, @NonNull ItemStack stack, int x, int y, float scaleFactor) {
         g.pose().pushMatrix();
         g.pose().translate(x, y);

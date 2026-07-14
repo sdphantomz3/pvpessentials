@@ -1,13 +1,18 @@
 {
-	"required": true,
-	"package": "com.drypted.pvpessentials.client.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"client": [
-	],
-	"injectors": {
-		"defaultRequire": 1
-	},
-	"overwrites": {
-		"requireAnnotations": true
-	}
+    "required": true,
+    "package": "com.drypted.pvpessentials.client.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "refmap": "pvp-essentials-refmap.json",
+    "client": [
+        "NoPotionParticlesMixin",
+        "ShieldMixin",
+        "ScreenEffectRendererMixin",
+        "ClientLevelMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
+    "overwrites": {
+        "requireAnnotations": true
+    }
 }
