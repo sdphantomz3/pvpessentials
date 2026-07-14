@@ -17,7 +17,7 @@ public abstract class ScreenEffectRendererMixin {
             method = "buildFireQuad",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/renderer/ScreenEffectRenderer;buildSpriteQuad"
+                    target = "Lnet/minecraft/client/renderer/ScreenEffectRenderer;buildSpriteQuad(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lorg/joml/Matrix4f;Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;FFFFFI)V"
             )
     )
     private static void pvpessentials$modifyHudFireHeight(Args args) {
@@ -30,15 +30,15 @@ public abstract class ScreenEffectRendererMixin {
         var offsetOpt = ConfigManager.getOption(PVPEssentialsClient.KEY_LOWFIRE_YOFFSET);
         float offset = 0.3f;
         if (offsetOpt != null) {
-            try { offset = Float.parseFloat(offsetOpt.value); } catch (NumberFormatException ignored) {}
+            try { 
+                offset = Float.parseFloat(offsetOpt.value); 
+            } catch (NumberFormatException ignored) {}
         }
 
-        // The original mixin used offset to modify the fire quad height.
-        // Since the original code did not actually use the offset value (commented out),
-        // we keep the same logic but now we have the value.
-        // If you need to apply the offset, you would modify args here.
-        // Currently the original code just returned if disabled.
-        // We'll just leave it as a placeholder.
-        // (The original code had a commented-out `offset` usage.)
+        float originalY0 = args.get(4);
+        float originalY1 = args.get(6);
+
+        args.set(4, originalY0 - offset); 
+        args.set(6, originalY1 - offset);
     }
 }

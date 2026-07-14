@@ -42,7 +42,7 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
     // DLib
-    implementation "maven.modrinth:Iz8w3MCj:6Tb5H0Vs"
+    implementation "maven.modrinth:Iz8w3MCj:sKaYP1Mj"
 }
 
 processResources {

@@ -81,6 +81,20 @@ public class PVPEssentialsClient implements ClientModInitializer {
         private final MiscHud miscHud = new MiscHud();
 
         public void createConfig() {
+                // ---- HUD Layout (top-level, no category) ----
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, null, "HUD Positioning Mode",
+                                KEY_HUD_AUTO_ADJUST, "cycle", "Auto Adjust",
+                                List.of("Auto Adjust", "Set Manually"),
+                                "Auto Adjust: HUDs auto-position based on screen size. Set Manually: use the HUD Layout Editor to position HUDs freely.");
+
+                ConfigManager.registerAction(MOD_ID, MOD_DISPLAY_NAME, null, "Edit HUD Positions",
+                                "pvpessentials.hudlayout.edit", "Open Editor",
+                                () -> {
+                                        Screen prev = Minecraft.getInstance().gui.screen();
+                                        Minecraft.getInstance().gui.setScreen(new HudEditorScreen(prev));
+                                },
+                                "Opens a drag-and-drop editor to position all HUD elements on screen.");
+
                 // ---- Armor HUD ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Armor HUD", "Enabled",
                                 KEY_ARMOR_ENABLED, "toggle", "true", null, null);
@@ -117,31 +131,15 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Damage Indicator", "Lifetime (ticks)",
                                 KEY_DAMAGE_LIFETIME, "number", "22", null, null);
 
-                // ---- HUD Layout ----
-                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Mode",
-                                KEY_HUD_AUTO_ADJUST, "cycle", "Auto Adjust",
-                                List.of("Auto Adjust", "Set Manually"),
-                                "Auto Adjust: HUDs auto-position based on screen size. Set Manually: use the HUD Layout Editor to position HUDs freely.");
-
-                // ---- HUD Layout Editor Action ----
-                ConfigManager.registerAction(MOD_ID, MOD_DISPLAY_NAME, "HUD Layout", "Edit HUD Layout",
-                                "pvpessentials.hudlayout.edit", "Open Editor",
-                                () -> {
-                                        Screen prev = Minecraft.getInstance().gui.screen();
-                                        Minecraft.getInstance().gui.setScreen(new HudEditorScreen(prev));
-                                },
-                                "Opens a drag-and-drop editor to position all HUD elements on screen.");
-
                 // ---- No Potion Particles ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Potion Particles", "Enabled",
                                 KEY_POTION_PARTICLES_ENABLED, "toggle", "true", null, null);
 
                 // ---- Low Fire ----
-                // ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Low Fire", "Enabled",
-                // KEY_LOWFIRE_ENABLED, "toggle", "true", null, null);
-                // ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Low Fire", "HUD
-                // YOffset",
-                // KEY_LOWFIRE_YOFFSET, "number", "0.3", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Low Fire", "Enabled",
+                KEY_LOWFIRE_ENABLED, "toggle", "true", null, null);
+                ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Low Fire", "HUD YOffset",
+                KEY_LOWFIRE_YOFFSET, "number", "0.3", null, null);
 
                 // ---- Shield ----
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Enabled",
@@ -150,6 +148,10 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Rotation",
                                 KEY_SHIELD_IDLE_ROTATION, "toggle", "true", null,
                                 "Rotate the shield sideways when not blocking.");
+
+                ConfigManager.registerSeparator(MOD_ID, MOD_DISPLAY_NAME, "Shield");
+                ConfigManager.registerHeading(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Advanced Settings");
+
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Idle Rotation Angle",
                                 KEY_SHIELD_IDLE_ROTATION_DEGREES, "number", "90", null,
                                 "Degrees to rotate the shield when idle (default 90).");
@@ -171,6 +173,20 @@ public class PVPEssentialsClient implements ClientModInitializer {
                 ConfigManager.registerOption(MOD_ID, MOD_DISPLAY_NAME, "Shield", "Blocking Z Offset",
                                 KEY_SHIELD_BLOCKING_Z, "number", "0", null,
                                 "Depth shift of the shield while blocking.");
+
+                // Explosion Particles
+                // Register the toggle option for disabling explosions
+ConfigManager.registerOption(
+    "pvpessentials", 
+    "PvP Essentials", 
+    "Explosion", 
+    "Disable Explosion Particles",
+    "pvpessentials+explosion+disable_explosions", 
+    "toggle", 
+    "false", 
+    null,
+    "Disables the smoke, flash, and flying blocks from explosions."
+);
 
                 ConfigManager.load();
         }

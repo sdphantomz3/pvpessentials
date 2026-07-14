@@ -4,7 +4,9 @@
 	"compatibilityLevel": "JAVA_25",
 	"client": [
 		"NoPotionParticlesMixin",
-		"ShieldMixin"
+		"ShieldMixin",
+		"ScreenEffectRendererMixin",
+		"ClientLevelMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
